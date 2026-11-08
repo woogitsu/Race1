@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Semantic compile of the Unity game layer against the official UnityEngine reference assemblies (2021.3 LTS
+    from NuGet). Packages that are not on NuGet (uGUI, URP, Input System, EventSystems) are replaced by the
+    small stubs in Stubs.cs. Input System and Android code is excluded with the same defines the real build
+    uses when those packages are absent. Errors that only come from the 2021.3 API surface are triaged by hand.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>CS0618;CS0414;CS0169;CS0649;CS8019</NoWarn>
+    <DefineConstants>$(DefineConstants);ENABLE_INPUT_SYSTEM</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Stubs.cs" />
+    <Compile Include="../../Assets/Race1/Core/**/*.cs" />
+    <Compile Include="../../Assets/Race1/Game/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" />
+  </ItemGroup>
+
+</Project>

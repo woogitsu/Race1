@@ -1,0 +1,14 @@
+{
+  "name": "Race1.Editor",
+  "rootNamespace": "Race1.Editor",
+  "references": [],
+  "includePlatforms": [ "Editor" ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
