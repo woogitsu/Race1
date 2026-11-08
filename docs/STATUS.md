@@ -45,6 +45,7 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
   (FWD/RWD/AWD, turbo z opóźnieniem, skrzynia auto/ręczna), hamulce z fadingiem, ABS, TC, ESP,
   asysta kierownicy, aero, opór toczenia, bariera z kolizją.
 - Trzy samochody o różnym charakterze (`VehicleCatalog`), oryginalne nazwy.
+- Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), testy w CoreTests.
 - Strojenie aut w garażu (`VehicleTuning`): sprężyny, tłumienie, przełożenie, hamulce i mieszanka opon z limitami zakresów; testy w CoreTests.
 - Ruch AI (IDM), zmiana pasa z przerwą, reakcja na gracza, zdarzenia wyprzedzania i bliskiego mijania.
 - Kamery: chase, bumper, hood, cockpit, cinematic (krytycznie tłumione, bez przeregulowania).

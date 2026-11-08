@@ -39,7 +39,7 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 - [x] **C1. Strojenie aut w modelu.** `VehicleTuningData` (sprężyny, tłumienie, przełożenie końcowe,
   hamulce) stosowane do `VehicleSpec` przez funkcję `VehicleTuning.Apply(spec, data)` z limitami
   zakresów. Test: zakresy są respektowane, a zapis/odczyt zachowuje wartości.
-- [ ] **C2. Tryb wyścigu AI.** Przeciwnicy na drodze z pozycjami w wyścigu (`RaceDirector`):
+- [x] **C2. Tryb wyścigu AI.** Przeciwnicy na drodze z pozycjami w wyścigu (`RaceDirector`):
   kolejność po dystansie wzdłuż drogi, czasy okrążenia/odcinka. Testy kolejności i zakończenia.
 - [ ] **C3. Pogoda i pora dnia w czasie.** Harmonogram zmian pogody i godziny (`WeatherSchedule`),
   deterministyczny z seedem. Testy: płynność parametrów, brak skoków przy przejściach.
@@ -75,6 +75,7 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
 
+- 2026-11-08 (uruchomienie 2, cykl godzinny) — C2 zrobione: `RaceDirector` (kolejność po dystansie, kolejność na mecie z interpolacją czasu przekroczenia linii, odstępy do lidera, remisy po Id) i `AiRacerModel` (IDM za najbliższym autem w tym samym pasie, trzy poziomy tempa). Pasy zapobiegają kolejkowaniu się wszystkich AI za jednym autem. Testy: CoreTests 93/93 (13 nowych w RaceDirectorTests), UnityCheck bez błędów. Następny: C3 (harmonogram pogody i pory dnia).
 - 2026-11-08 (uruchomienie 1) — C1 zrobione: `VehicleTuning.Apply` (Core/Garage) z limitami zakresów, bez zmiany bazowego auta, normalizacja rekordu zapisu. Testy: CoreTests 80/80 (9 nowych w VehicleTuningTests), UnityCheck bez błędów. Następny: C2 (tryb wyścigu AI).
 - 2026-11-08 — Utworzono plan prac i cykliczne uruchamianie co godzinę. Stan wyjściowy: testy 71/71,
   UnityCheck bez błędów. Licencja Unity zablokowana po stronie użytkownika (szczegóły w BUILD_AND_INSTALL).
