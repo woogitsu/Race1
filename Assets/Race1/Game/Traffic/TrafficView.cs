@@ -24,7 +24,7 @@ namespace Race1.Game
             _spec = spec;
         }
 
-        public void Tick(IReadOnlyList<TrafficCar> cars, RoadTrack road, Vector3d origin)
+        public void Tick(IReadOnlyList<TrafficCar> cars, RoadTrack road, Vector3d origin, float night01)
         {
             _seen.Clear();
             for (int i = 0; i < cars.Count; i++)
@@ -39,6 +39,7 @@ namespace Race1.Game
                 }
                 RoadSample sample = road.Sample(car.S);
                 view.Place(sample, car.T, 0.0, origin, null, 0f);
+                view.SetNight(night01);
             }
 
             var gone = new List<int>();

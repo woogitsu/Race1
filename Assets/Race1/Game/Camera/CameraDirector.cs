@@ -37,7 +37,7 @@ namespace Race1.Game
             Mode = (CameraMode)(((int)Mode + 1) % 5);
         }
 
-        public void Tick(float dt, CarView car, VehicleTelemetry tm, Vector3d origin)
+        public void Tick(float dt, CarView car, VehicleTelemetry tm, Vector3d origin, CameraEffectsOutput fx)
         {
             Vector3d carPos = car.WorldPosition;
             Vector3d fwd = car.WorldForward;
@@ -91,14 +91,18 @@ namespace Race1.Game
                     break;
             }
 
-            _camera.fieldOfView = (float)fov;
-            Vector3 p = CarView.ToFloat(position - origin);
-            Vector3 l = CarView.ToFloat(lookAt - origin);
+            // Camera effects: impact shake and cockpit bob move the view, roll leans it, FOV kicks with speed.
+            _camera.fieldOfView = (float)(fov + fx.FovOffsetDeg);
+            Vector3 shake = CarView.ToFloat(right * fx.ShakeX + up * (fx.ShakeY + fx.HeadBobY));
+            Vector3 p = CarView.ToFloat(position - origin) + shake;
+            Vector3 l = CarView.ToFloat(lookAt - origin) + shake;
             _camera.transform.position = p;
             Vector3 dir = l - p;
             if (dir.sqrMagnitude > 1e-6f)
             {
-                _camera.transform.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+                Quaternion look = Quaternion.LookRotation(dir.normalized, Vector3.up);
+                float rollDeg = (float)(fx.RollRad * Mathx.Rad2Deg);
+                _camera.transform.rotation = look * Quaternion.Euler(0f, 0f, rollDeg);
             }
         }
 

@@ -27,7 +27,9 @@ namespace Race1.Editor
             EnsureFolders();
             EnsureScene();
             EnsureConfigAsset();
+            Race1VisualSetup.CreateProfileIfMissing();
             ConfigureAndroidPlayer();
+            ConfigureAndroidTools();
             AssignUrpAsset();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -115,6 +117,30 @@ namespace Race1.Editor
 
             Debug.Log("Race1: Android player settings applied. Set Active Input Handling to 'Both' " +
                       "(Project Settings > Player > Other Settings) so touch, gamepad and tilt are all enabled.");
+        }
+
+        /// <summary>
+        /// Points the editor at the Android SDK, NDK and JDK installed on this machine. Values are editor
+        /// preferences, so they stay per machine and are not committed to the repository.
+        /// </summary>
+        private static void ConfigureAndroidTools()
+        {
+            string sdk = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? "/opt/android-sdk";
+            string ndk = Path.Combine(sdk, "ndk", "23.1.7779620");
+            string jdk = Environment.GetEnvironmentVariable("JAVA_HOME");
+            if (string.IsNullOrEmpty(jdk)) jdk = "/usr/lib/jvm/java-17-openjdk-amd64";
+
+            if (Directory.Exists(sdk)) EditorPrefs.SetString("AndroidSdkRoot", sdk);
+            if (Directory.Exists(ndk))
+            {
+                EditorPrefs.SetString("AndroidNdkRoot", ndk);
+                EditorPrefs.SetString("AndroidNdkRootR23b", ndk);
+            }
+            else
+            {
+                Debug.LogWarning("Race1: NDK not found at " + ndk + ". Install NDK r23b or set the path in Preferences > External Tools.");
+            }
+            if (Directory.Exists(jdk)) EditorPrefs.SetString("JdkPath", jdk);
         }
 
         private static void AssignUrpAsset()

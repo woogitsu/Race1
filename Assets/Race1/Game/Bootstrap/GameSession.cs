@@ -8,7 +8,7 @@ namespace Race1.Game
     /// <summary>
     /// Composition root and main loop. Creates the world, views and systems at startup, with no scene setup
     /// required. Runs three states: menu (with the garage showroom), driving, and paused. Physics and road
-    /// maths come from the core; this class only connects them to the engine.
+    /// maths come from the core; this class connects them to the engine.
     /// </summary>
     public sealed class GameSession : MonoBehaviour
     {
@@ -25,6 +25,7 @@ namespace Race1.Game
         private const int DayOfYear = 172;
         private const double TimeAttackLength = 3000.0;
         private const float TimeAttackRestartDelay = 4.0f;
+        private const double Turbidity = 3.0;
 
         public static GameSession Instance { get; private set; }
 
@@ -45,6 +46,7 @@ namespace Race1.Game
         private PlayerInputReader _input;
         private PlayerInputReader.Settings _inputSettings;
         private CameraDirector _camera;
+        private CameraEffects _cameraEffects;
         private Camera _cam;
         private Light _sun;
         private RoadSettings _roadSettings;
@@ -53,6 +55,15 @@ namespace Race1.Game
         private RoadTrack _road;
         private RoadChunkStreamer _chunks;
         private VegetationStreamer _vegetation;
+        private RoadMaterialSet _roadMats;
+        private TerrainMaterialSet _terrainMats;
+        private Material _railMat;
+        private Material _postMat;
+        private Material _lampMat;
+        private Material _skyMat;
+        private WeatherVisuals _weatherVisuals;
+        private ReflectionProbeRig _reflectionRig;
+        private PostProcessingController _post;
         private Transform _worldRoot;
         private Transform _showroomRoot;
         private CarView _showroomCar;
@@ -71,11 +82,14 @@ namespace Race1.Game
         private AppState _state = AppState.Menu;
         private Vector3d _origin;
         private double _hour = 12.0;
+        private float _night01;
+        private float _golden01;
         private float _autosaveTimer = AutosaveSeconds;
         private float _skyTimer;
         private float _showroomAngle;
         private float _restartTimer = -1f;
         private double _distanceReported;
+        private readonly double[] _prevCompression = new double[4];
 
         private void Awake()
         {
@@ -170,7 +184,7 @@ namespace Race1.Game
             var camGo = new GameObject("MainCamera");
             camGo.tag = "MainCamera";
             _cam = camGo.AddComponent<Camera>();
-            _cam.clearFlags = CameraClearFlags.SolidColor;
+            _cam.clearFlags = CameraClearFlags.Skybox;
             camGo.AddComponent<AudioListener>();
 
             var sunGo = new GameObject("Sun");
@@ -182,6 +196,14 @@ namespace Race1.Game
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+
+            // Procedural sky: the Race1/Sky shader is driven by the atmosphere model every second.
+            Shader sky = Shader.Find("Race1/Sky");
+            if (sky != null)
+            {
+                _skyMat = new Material(sky) { name = "Race1Sky" };
+                RenderSettings.skybox = _skyMat;
+            }
 
             _worldRoot = new GameObject("World").transform;
             _showroomRoot = new GameObject("Showroom").transform;
@@ -204,15 +226,21 @@ namespace Race1.Game
             _terrain = new TerrainField(seed, _biomes);
             _road = new RoadTrack(_roadSettings, _terrain, _biomes);
 
+            _roadMats = RoadMaterialFactory.Create(seed);
+            _terrainMats = TerrainMaterialFactory.Create(seed);
+            _railMat = RenderMaterials.Create(new Color(0.55f, 0.57f, 0.6f), 0.9f, 0.55f, null);
+            _postMat = RenderMaterials.Create(new Color(0.25f, 0.26f, 0.28f), 0.6f, 0.4f, null, true);
+            _lampMat = RenderMaterials.Emissive(new Color(0.9f, 0.9f, 0.85f), Color.black);
+            _lampMat.enableInstancing = true;
+
             Material bark = RenderMaterials.Create(new Color(0.32f, 0.22f, 0.14f), 0f, 0.2f, null, true);
             Material needles = RenderMaterials.Create(new Color(0.08f, 0.24f, 0.12f), 0f, 0.3f, null, true);
             Material foliage = RenderMaterials.Create(new Color(0.22f, 0.42f, 0.14f), 0f, 0.3f, null, true);
             Material rock = RenderMaterials.Create(new Color(0.42f, 0.40f, 0.37f), 0f, 0.25f, null, true);
             _vegetation = new VegetationStreamer(seed, bark, needles, foliage, rock);
 
-            Material asphalt = RenderMaterials.Create(Color.white, 0f, 0.35f, ProceduralTextures.Asphalt(seed));
-            Material marking = RenderMaterials.Create(new Color(0.92f, 0.92f, 0.9f), 0f, 0.5f, null);
-            _chunks = new RoadChunkStreamer(_road, _terrain, _biomes, _worldRoot, asphalt, marking, _vegetation);
+            _chunks = new RoadChunkStreamer(_road, _terrain, _biomes, _worldRoot, _roadMats, _terrainMats,
+                _railMat, _postMat, _lampMat, _vegetation, seed);
             _chunks.BuildsPerFrame = _config.BuildsPerFrame;
         }
 
@@ -224,10 +252,16 @@ namespace Race1.Game
             _inputSettings = new PlayerInputReader.Settings();
             _input = new PlayerInputReader(_hud.Controls, _inputSettings);
             _camera = new CameraDirector(_cam);
+            _cameraEffects = new CameraEffects();
             _weather = new WeatherState();
             _perf = new PerformanceDirector(QualityTier.High, QualityTier.Ultra);
             _menu = new MenuController();
             _trafficView = new TrafficView(_worldRoot, VehicleCatalog.Create(VehicleCatalog.AuroraVeloce));
+
+            _weatherVisuals = new WeatherVisuals(_cam, _worldRoot);
+            _weatherVisuals.BindRoads(_roadMats);
+            _reflectionRig = new ReflectionProbeRig(_worldRoot);
+            _post = new PostProcessingController();
         }
 
         // ----- States -----
@@ -309,7 +343,10 @@ namespace Race1.Game
             // Pre-fill the road around the start so the first frames are not a blank strip.
             for (int i = 0; i < 6; i++) _chunks.Update(startS, _origin);
             _playerView.Place(start, startT, 0.0, _origin, _player.Telemetry, 0f);
+            _playerView.SetNight(_night01);
             _camera.Snap(_playerView);
+            _cameraEffects.Reset();
+            for (int i = 0; i < 4; i++) _prevCompression[i] = _player.Telemetry.Compression[i];
 
             _worldRoot.gameObject.SetActive(true);
             _showroomRoot.gameObject.SetActive(false);
@@ -339,17 +376,20 @@ namespace Race1.Game
 
         private void TickMenu(float dt)
         {
-            // Menu choices drive the showroom sky and weather live, so the player sees what they picked.
+            // Menu choices drive the showroom sky, weather and lights live, so the player sees what they picked.
             MenuOptions opts = _menu.Options;
             _hour = MenuOptions.Hours[opts.HourIndex];
             _weather.SetKind((WeatherKind)opts.WeatherIndex);
             _weather.Update(dt);
             RefreshShowroom();
+            _weatherVisuals.Tick(dt, _weather, Vector3.zero, Vector3.forward, 0f);
+            _post.Tick(dt, new PostState { Night01 = _night01, Golden01 = _golden01, Rain01 = (float)_weather.Rain, Fog01 = (float)_weather.Fog });
 
             _showroomAngle += dt * 18f;
             if (_showroomCar != null)
             {
                 _showroomCar.transform.localRotation = Quaternion.Euler(0f, _showroomAngle, 0f);
+                _showroomCar.SetNight(_night01);
             }
 
             // Showroom orbit: the camera circles the car slowly, close enough to read the paint.
@@ -378,6 +418,16 @@ namespace Race1.Game
             VehicleTelemetry tm = _player.Telemetry;
             double s = _player.S;
 
+            // Suspension roughness: RMS of the corner compression velocities, used for cockpit vibration.
+            double sumSq = 0.0;
+            for (int i = 0; i < 4; i++)
+            {
+                double v = dt > 0f ? (tm.Compression[i] - _prevCompression[i]) / dt : 0.0;
+                sumSq += v * v;
+                _prevCompression[i] = tm.Compression[i];
+            }
+            double roughness = Math.Sqrt(sumSq / 4.0);
+
             _traffic.Update(dt, s, _player.T, tm.SpeedMs);
             foreach (TrafficEvent e in _traffic.Events)
             {
@@ -385,6 +435,7 @@ namespace Race1.Game
                 {
                     _scorer.OnCollision();
                     _hud.Flash();
+                    _cameraEffects.TriggerImpact(0.8);
                 }
                 else if (e.Kind == TrafficEventKind.NearMiss)
                 {
@@ -413,13 +464,38 @@ namespace Race1.Game
 
             // Road and world.
             _chunks.Update(s, _origin);
+            _chunks.DrawRoadside(_origin);
             _vegetation.Draw(_chunks.Active, _origin);
             _playerView.Place(_road.Sample(s), _player.T, _player.HeadingError, _origin, tm, dt);
-            _trafficView.Tick(_traffic.Cars, _road, _origin);
+            _playerView.SetNight(_night01);
+            _trafficView.Tick(_traffic.Cars, _road, _origin, _night01);
 
-            double throttle = tm.Throttle;
-            _engineAudio.Set(tm.EngineRpm, throttle, 0.55);
-            _camera.Tick(dt, _playerView, tm, _origin);
+            Vector3 focus = CarView.ToFloat(_playerView.WorldPosition - _origin);
+            _weatherVisuals.Tick(dt, _weather, focus, CarView.ToFloat(_playerView.WorldForward), (float)tm.SpeedMs);
+            _reflectionRig.Follow(focus, dt);
+
+            _engineAudio.Set(tm.EngineRpm, tm.Throttle, 0.55);
+
+            // Camera effects: shake, roll and FOV kick from the car's motion.
+            CameraEffectsOutput fx = _cameraEffects.Step(new CameraEffectsInput
+            {
+                SpeedMs = tm.SpeedMs,
+                LateralG = tm.LateralG,
+                LongitudinalG = tm.LongitudinalG,
+                SuspensionRoughness = roughness,
+                Airborne = false,
+            }, dt);
+            _camera.Tick(dt, _playerView, tm, _origin, fx);
+
+            _post.Tick(dt, new PostState
+            {
+                Night01 = _night01,
+                Golden01 = _golden01,
+                Rain01 = (float)_weather.Rain,
+                Fog01 = (float)_weather.Fog,
+                Impact01 = (float)fx.ImpactFlash01,
+                Speed01 = (float)Mathx.Clamp01(tm.SpeedKmh / 300.0),
+            });
 
             // Floating origin: when the car is far from the origin, move the origin to the car.
             if (Vector3d.Distance(_playerView.WorldPosition, _origin) > 400.0)
@@ -494,29 +570,52 @@ namespace Race1.Game
             _showroomCar.transform.localPosition = Vector3.zero;
         }
 
+        /// <summary>Sun, sky shader, fog and ambient light from the atmosphere model. Runs once per second.</summary>
         private void UpdateSky()
         {
             SkyModel.SolarPosition(LatitudeDeg, DayOfYear, _hour, out double elev, out double az);
             Vector3 towardsSun = new Vector3((float)(Math.Sin(az) * Math.Cos(elev)), (float)Math.Sin(elev),
                 (float)(Math.Cos(az) * Math.Cos(elev)));
+            SkyLook look = Atmosphere.Evaluate(elev, _weather.Cloud, _weather.Rain, _weather.Fog, Turbidity);
+
+            _night01 = (float)SkyModel.NightFactor(elev);
+            _golden01 = (float)SkyModel.GoldenHourFactor(elev);
+
             _sun.transform.rotation = Quaternion.LookRotation(-towardsSun);
+            _sun.intensity = (float)(0.1 + 1.6 * look.SunIntensity);
+            _sun.color = ToColor(look.SunTint);
 
-            double cloud = _weather.Cloud;
-            double day = SkyModel.SunIntensity(elev) * (1.0 - 0.55 * cloud);
-            _sun.intensity = (float)(0.12 + 1.15 * day);
-            double golden = SkyModel.GoldenHourFactor(elev);
-            _sun.color = Color.Lerp(new Color(1f, 0.97f, 0.92f), new Color(1f, 0.6f, 0.36f), (float)golden);
+            _cam.backgroundColor = ToColor(look.Horizon);
+            RenderSettings.fogColor = ToColor(look.FogTint);
+            RenderSettings.fogDensity = (float)(0.00025 + 0.0012 * _weather.Fog + 0.0005 * _weather.Rain);
+            RenderSettings.ambientLight = ToColor(look.Ambient);
 
-            double night = SkyModel.NightFactor(elev);
-            Color dayCol = new Color(0.52f, 0.70f, 0.92f);
-            Color nightCol = new Color(0.02f, 0.03f, 0.07f);
-            Color sky = Color.Lerp(dayCol, nightCol, (float)night);
-            sky = Color.Lerp(sky, new Color(0.95f, 0.55f, 0.35f), (float)(golden * 0.6));
-            sky = Color.Lerp(sky, new Color(0.55f, 0.57f, 0.6f), (float)Mathx.Clamp01(_weather.Rain * 0.5 + _weather.Fog * 0.8));
-            _cam.backgroundColor = sky;
-            RenderSettings.fogColor = sky;
-            RenderSettings.fogDensity = (float)(0.00035 + 0.0012 * _weather.Fog + 0.0006 * _weather.Rain);
-            RenderSettings.ambientLight = Color.Lerp(new Color(0.05f, 0.06f, 0.09f), new Color(0.42f, 0.45f, 0.5f), (float)(1.0 - night));
+            if (_skyMat != null)
+            {
+                _skyMat.SetColor("_ZenithColor", ToColor(look.Zenith));
+                _skyMat.SetColor("_HorizonColor", ToColor(look.Horizon));
+                _skyMat.SetColor("_GroundColor", ToColor(look.Ground));
+                _skyMat.SetColor("_SunColor", ToColor(look.SunTint));
+                _skyMat.SetVector("_SunDirection", new Vector4(towardsSun.x, towardsSun.y, towardsSun.z, 0f));
+                _skyMat.SetFloat("_SunSize", 0.03f);
+                _skyMat.SetFloat("_SunGlow", (float)look.SunGlow);
+                _skyMat.SetFloat("_StarVisibility", (float)look.StarVisibility);
+                _skyMat.SetFloat("_CloudCoverage", (float)look.CloudCoverage);
+                _skyMat.SetFloat("_CloudDensity", (float)look.CloudDensity);
+                _skyMat.SetFloat("_CloudBrightness", (float)look.CloudBrightness);
+                _skyMat.SetFloat("_CloudSpeed", 0.01f);
+            }
+
+            // Street lamps glow only at night.
+            if (_lampMat != null)
+            {
+                _lampMat.SetColor("_EmissionColor", new Color(1f, 0.8f, 0.5f) * (_night01 * 4f));
+            }
+        }
+
+        private static Color ToColor(LinearRgb c)
+        {
+            return new Color(Mathf.Clamp01((float)c.R), Mathf.Clamp01((float)c.G), Mathf.Clamp01((float)c.B), 1f);
         }
 
         private void SaveNow()

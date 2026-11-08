@@ -59,6 +59,7 @@ namespace Race1.Game
         {
             public Mesh Mesh;
             public Color TerrainTint;
+            public BiomeKind Biome;
             public Vector3d Origin;
         }
 
@@ -153,20 +154,21 @@ namespace Race1.Game
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
-            BiomeProfile profile = SampleBiome(biomes, origin.X + 50, origin.Z);
+            BiomeProfile profile = SampleBiome(biomes, origin.X + 50, origin.Z, out BiomeKind biome);
             return new ChunkData
             {
+                Biome = biome,
                 Mesh = mesh,
                 TerrainTint = new Color((float)profile.TintR, (float)profile.TintG, (float)profile.TintB),
                 Origin = origin,
             };
         }
 
-        private static BiomeProfile SampleBiome(BiomeField biomes, double x, double z)
+        private static BiomeProfile SampleBiome(BiomeField biomes, double x, double z, out BiomeKind dominant)
         {
             var w = new double[Biomes.Count];
             biomes.Weights(x, z, w);
-            return Biomes.Blend(w, out _);
+            return Biomes.Blend(w, out dominant);
         }
 
         private static void AddMarkings(RoadSample a, RoadSample b, Vector3d origin,
