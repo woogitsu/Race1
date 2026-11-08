@@ -12,6 +12,11 @@ bez zgadywania. Jeśli któryś krok nie działa, zapisz dokładny komunikat i w
 - Telefon Samsung Galaxy Z Fold 8 Ultra (lub inny z Androidem 11+) z włączonym trybem dewelopera
   i debugowaniem USB.
 
+> **Aktywacja licencji.** Konto Personal nie może aktywować licencji offline (ograniczenie Unity dla miejsc
+> Enterprise i Industry), a logowanie Unity ID wymaga przeglądarki na tym samym komputerze, co edytor.
+> Dlatego budowę najprościej wykonać na własnym komputerze z Unity Hub, zalogowanym na Unity ID.
+> Edytor z kontenera uruchamia się poprawnie i czeka tylko na licencję.
+
 ## 2. Otwarcie projektu
 
 1. W Unity Hub wybierz **Open** i wskaż folder repozytorium.
