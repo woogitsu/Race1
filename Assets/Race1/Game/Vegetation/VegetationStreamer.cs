@@ -6,36 +6,97 @@ namespace Race1.Game
 {
     /// <summary>
     /// Scatters trees and rocks deterministically per chunk (same seed, same chunk, same result) and draws them
-    /// with GPU instancing: one draw call per 1023 instances per mesh, not one GameObject per tree.
+    /// with GPU instancing: one draw call per 1023 instances per mesh, not one GameObject per tree. Each chunk has
+    /// one tree species, chosen from its centre biome, so a chunk batches into one mesh per submesh.
     /// </summary>
     public sealed class VegetationStreamer
     {
+        /// <summary>
+        /// Tree species. A chunk stores its value in <see cref="RoadChunkStreamer.Chunk.TreeVariant"/>.
+        /// <c>None</c> (-1) means the chunk has rocks only.
+        /// </summary>
+        public enum TreeSpecies
+        {
+            /// <summary>Tall spruce, needle cards.</summary>
+            Conifer = 0,
+            /// <summary>Open pine, needle clusters on a leaning trunk.</summary>
+            Pine = 1,
+            /// <summary>Oak, leaf cards.</summary>
+            Broadleaf = 2,
+            /// <summary>Birch, white trunk and small leaf cards.</summary>
+            Birch = 3,
+            /// <summary>No trees (desert).</summary>
+            None = -1,
+        }
+
         private const int MaxPerDraw = 1023;
         private const int CandidatesPerChunk = 40;
+        private const double SparseDensity = 0.35;   // highway and town: fewer trees
+        private const int BarkSub = 0;
+        private const int FoliageSub = 1;
+
+        private sealed class SpeciesSet
+        {
+            public Mesh[] Meshes;
+            public Material Bark;
+            public Material Leaves;
+        }
 
         private readonly ulong _seed;
-        private readonly Mesh[] _conifer;
-        private readonly Mesh[] _broadleaf;
-        private readonly Mesh _rock;
-        private readonly Material _barkMaterial;
-        private readonly Material[] _leafMaterials;
+        private readonly SpeciesSet[] _species;   // indexed by TreeSpecies, Conifer..Birch
+        private readonly Mesh[] _rocks;
         private readonly Material _rockMaterial;
         private readonly Matrix4x4[] _scratch = new Matrix4x4[MaxPerDraw];
 
+        /// <summary>
+        /// Builds two meshes per species and per rock (two seeds each, so the variety repeats less) and prepares
+        /// the materials: bark gets the bark texture, needles the needle cluster, foliage the leaf card.
+        /// </summary>
         public VegetationStreamer(ulong seed, Material bark, Material needles, Material foliage, Material rock)
         {
             _seed = seed;
-            _conifer = new[] { ProceduralMeshes.Conifer(11), ProceduralMeshes.Conifer(23) };
-            _broadleaf = new[] { ProceduralMeshes.Broadleaf(31), ProceduralMeshes.Broadleaf(47) };
-            _rock = ProceduralMeshes.Rock(59);
-            _barkMaterial = bark;
-            _leafMaterials = new[] { needles, foliage };
+
+            ConfigureBark(bark);
+            ConfigureCards(needles, TreeTextures.NeedleCluster);
+            ConfigureCards(foliage, TreeTextures.LeafCard);
+            Material birchBark = CreateBirchBark(bark);
+
+            _species = new[]
+            {
+                new SpeciesSet
+                {
+                    Meshes = new[] { ProceduralMeshes.Conifer(11), ProceduralMeshes.Conifer(23) },
+                    Bark = bark,
+                    Leaves = needles,
+                },
+                new SpeciesSet
+                {
+                    Meshes = new[] { ProceduralMeshes.Pine(71), ProceduralMeshes.Pine(89) },
+                    Bark = bark,
+                    Leaves = needles,
+                },
+                new SpeciesSet
+                {
+                    Meshes = new[] { ProceduralMeshes.Broadleaf(31), ProceduralMeshes.Broadleaf(47) },
+                    Bark = bark,
+                    Leaves = foliage,
+                },
+                new SpeciesSet
+                {
+                    Meshes = new[] { ProceduralMeshes.Birch(101), ProceduralMeshes.Birch(113) },
+                    Bark = birchBark,
+                    Leaves = foliage,
+                },
+            };
+
+            _rocks = new[] { ProceduralMeshes.Rock(59), ProceduralMeshes.Rock(67) };
             _rockMaterial = rock;
+            if (rock != null) rock.enableInstancing = true;
         }
 
         /// <summary>
         /// Density comes from the biome at each candidate point, so forests are dense and deserts almost bare.
-        /// The tree species is chosen once per chunk from its centre biome, so each chunk batches cleanly.
+        /// The species is chosen once per chunk from its centre biome, so each chunk batches cleanly.
         /// </summary>
         public void Populate(RoadChunkStreamer.Chunk chunk, RoadTrack road, TerrainField terrain, BiomeField biomes)
         {
@@ -52,8 +113,10 @@ namespace Race1.Game
             var weights = new double[Biomes.Count];
 
             biomes.Weights(chunk.Origin.X + 50.0, chunk.Origin.Z, weights);
-            BiomeProfile centre = Biomes.Blend(weights, out BiomeKind centreKind);
-            chunk.TreeVariant = (centreKind == BiomeKind.Forest || centreKind == BiomeKind.Alpine) ? 0 : 1;
+            Biomes.Blend(weights, out BiomeKind centreKind);
+            TreeSpecies species = ChooseSpecies(centreKind, rng.NextDouble());
+            chunk.TreeVariant = (int)species;
+            double density = IsSparse(centreKind) ? SparseDensity : 1.0;
 
             for (int c = 0; c < CandidatesPerChunk; c++)
             {
@@ -79,7 +142,8 @@ namespace Race1.Game
                     chunk.Rocks[chunk.RockCount++] = Matrix4x4.TRS(ToVec3(local), Quaternion.Euler(0f, (float)yaw, 0f),
                         Vector3.one * (float)(scale * rng.Range(0.8, 1.8)));
                 }
-                else if (roll < profile.Rockiness * 0.25 + profile.Vegetation * 0.7 && profile.Vegetation > 0.02)
+                else if (species != TreeSpecies.None && profile.Vegetation > 0.02 &&
+                         roll < profile.Rockiness * 0.25 + profile.Vegetation * 0.7 * density)
                 {
                     chunk.Trees[chunk.TreeCount++] = Matrix4x4.TRS(ToVec3(local), Quaternion.Euler(0f, (float)yaw, 0f),
                         Vector3.one * (float)scale);
@@ -96,13 +160,44 @@ namespace Race1.Game
                 Vector3 offset = new Vector3((float)(chunk.Origin.X - origin.X), (float)(chunk.Origin.Y - origin.Y),
                     (float)(chunk.Origin.Z - origin.Z));
                 Matrix4x4 root = Matrix4x4.Translate(offset);
-                int pick = (int)(chunk.Index & 1);
-                Mesh treeMesh = chunk.TreeVariant == 0 ? _conifer[pick] : _broadleaf[pick];
-                DrawBatch(treeMesh, _barkMaterial, root, chunk.Trees, chunk.TreeCount, 0);
-                DrawBatch(treeMesh, _leafMaterials[chunk.TreeVariant], root, chunk.Trees, chunk.TreeCount, 1);
-                DrawBatch(_rock, _rockMaterial, root, chunk.Rocks, chunk.RockCount, 0);
+                int pick = MeshPick(chunk.Index);
+
+                if (chunk.TreeCount > 0 && chunk.TreeVariant >= 0 && chunk.TreeVariant < _species.Length)
+                {
+                    SpeciesSet set = _species[chunk.TreeVariant];
+                    Mesh treeMesh = set.Meshes[pick];
+                    DrawBatch(treeMesh, set.Bark, root, chunk.Trees, chunk.TreeCount, BarkSub);
+                    DrawBatch(treeMesh, set.Leaves, root, chunk.Trees, chunk.TreeCount, FoliageSub);
+                }
+                DrawBatch(_rocks[pick], _rockMaterial, root, chunk.Rocks, chunk.RockCount, BarkSub);
             }
         }
+
+        /// <summary>Picks the species for a chunk from its centre biome and a per-chunk roll.</summary>
+        private static TreeSpecies ChooseSpecies(BiomeKind kind, double roll)
+        {
+            switch (kind)
+            {
+                case BiomeKind.Forest:
+                    return roll < 0.6 ? TreeSpecies.Conifer : TreeSpecies.Pine;
+                case BiomeKind.Alpine:
+                    return roll < 0.75 ? TreeSpecies.Conifer : TreeSpecies.Pine;
+                case BiomeKind.Meadow:
+                    return roll < 0.6 ? TreeSpecies.Broadleaf : TreeSpecies.Birch;
+                case BiomeKind.Coast:
+                    return roll < 0.5 ? TreeSpecies.Broadleaf : TreeSpecies.Birch;
+                case BiomeKind.Highway:
+                case BiomeKind.Town:
+                    return TreeSpecies.Broadleaf;
+                default:
+                    return TreeSpecies.None;
+            }
+        }
+
+        private static bool IsSparse(BiomeKind kind) => kind == BiomeKind.Highway || kind == BiomeKind.Town;
+
+        /// <summary>Which of the two meshes per species a chunk uses. A hash of the chunk index, so it is stable.</summary>
+        private int MeshPick(long index) => (int)(DeterministicRng.Finalize((ulong)index ^ _seed) & 1UL);
 
         private void DrawBatch(Mesh mesh, Material material, Matrix4x4 root, Matrix4x4[] source, int count, int submesh)
         {
@@ -117,6 +212,42 @@ namespace Race1.Game
                 Graphics.DrawMeshInstanced(mesh, submesh, material, _scratch, n, null,
                     UnityEngine.Rendering.ShadowCastingMode.On, true);
             }
+        }
+
+        private static void ConfigureBark(Material bark)
+        {
+            if (bark == null) return;
+            bark.enableInstancing = true;
+            SetMainTexture(bark, TreeTextures.Bark);
+        }
+
+        /// <summary>Alpha-tested, double-sided card material. The texture's alpha is the leaf or needle mask.</summary>
+        private static void ConfigureCards(Material m, Texture2D alpha)
+        {
+            if (m == null) return;
+            m.enableInstancing = true;
+            SetMainTexture(m, alpha);
+            m.EnableKeyword("_ALPHATEST_ON");
+            if (m.HasProperty("_Cutoff")) m.SetFloat("_Cutoff", 0.4f);
+            if (m.HasProperty("_AlphaClip")) m.SetFloat("_AlphaClip", 1f);
+            if (m.HasProperty("_Mode")) m.SetFloat("_Mode", 1f);
+            if (m.HasProperty("_Cull")) m.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+        }
+
+        /// <summary>A copy of the bark material with a near-white colour, so the birch trunk reads as white.</summary>
+        private static Material CreateBirchBark(Material bark)
+        {
+            if (bark == null) return null;
+            var m = new Material(bark) { name = "Race1 birch bark", enableInstancing = true };
+            RenderMaterials.SetBaseColor(m, new Color(1f, 0.98f, 0.94f));
+            return m;
+        }
+
+        private static void SetMainTexture(Material m, Texture texture)
+        {
+            if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", texture);
+            if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", texture);
         }
 
         private static Vector3 ToVec3(Vector3d v) => new Vector3((float)v.X, (float)v.Y, (float)v.Z);
