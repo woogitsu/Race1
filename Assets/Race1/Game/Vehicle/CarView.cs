@@ -6,18 +6,26 @@ namespace Race1.Game
     /// <summary>
     /// Visual car. Position comes from road-relative physics: the car sits at (s, t) on the road, its heading is
     /// road heading plus heading error, and its up vector is the road normal. Suspension compression drives body
-    /// pitch and roll; wheel speed drives spin; steering angle drives the front wheels.
+    /// pitch and roll; wheel speed drives spin; steering angle drives the front wheels. Lamps follow the body and
+    /// respond to night (<see cref="SetNight"/>) and brake input.
     /// </summary>
     public sealed class CarView : MonoBehaviour
     {
+        // Glass, tyre and rim materials carry no per-car state, so every car shares one instance of each.
+        private static Material _glassMaterial;
+        private static Material _tyreMaterial;
+        private static Material _rimMaterial;
+
         private Transform _body;
         private readonly Transform[] _steer = new Transform[4];
         private readonly Transform[] _spin = new Transform[4];
         private readonly double[] _spinAngle = new double[4];
         private Material _paint;
-        private Material _lights;
+        private Material _lensMaterial;
+        private CarLights _carLights;
         private VehicleSpec _spec;
         private float _brakeGlow;
+        private float _night;
 
         public VehicleSpec Spec => _spec;
         public Vector3d WorldPosition { get; private set; }
@@ -31,6 +39,17 @@ namespace Race1.Game
             var view = go.AddComponent<CarView>();
             view.Build(spec, paint);
             return view;
+        }
+
+        /// <summary>
+        /// Night amount for the lamps: 0 is full day, 1 is full night. Headlights switch on with it, and the
+        /// value holds until it is set again. <see cref="Place"/> has no night input, so the owner calls this.
+        /// AI cars (null telemetry) keep their last value, so they need this call too to show headlights at night.
+        /// </summary>
+        public void SetNight(float night01)
+        {
+            _night = Mathf.Clamp01(night01);
+            if (_carLights != null) _carLights.SetNight(_night);
         }
 
         private void Build(VehicleSpec spec, Color paint)
@@ -47,21 +66,20 @@ namespace Race1.Game
             var renderer = shell.AddComponent<MeshRenderer>();
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
 
-            _paint = RenderMaterials.Create(paint, 0.7f, 0.85f, null);
-            Material glass = RenderMaterials.Create(new Color(0.04f, 0.06f, 0.08f), 0f, 0.95f, null);
-            _lights = RenderMaterials.Emissive(new Color(0.95f, 0.95f, 0.9f), new Color(0.9f, 0.9f, 0.85f));
-            renderer.sharedMaterials = new[] { _paint, glass, _lights };
+            // Submesh contract from CarMeshFactory: 0 = paint, 1 = glass, 2 = lights.
+            _paint = CarPaint.CreateBodyPaint(paint);
+            _lensMaterial = RenderMaterials.Emissive(new Color(0.95f, 0.95f, 0.9f), new Color(0.5f, 0.5f, 0.45f));
+            renderer.sharedMaterials = new[] { _paint, GlassMaterial, _lensMaterial };
+
+            _carLights = new CarLights(_body, (float)spec.LengthM, (float)spec.WidthM, (float)spec.HeightM);
 
             Mesh wheelMesh = CarMeshFactory.BuildWheel(spec);
-            Material tyre = RenderMaterials.Create(new Color(0.03f, 0.03f, 0.035f), 0f, 0.35f, null);
-            Material rim = RenderMaterials.Create(new Color(0.72f, 0.74f, 0.77f), 0.9f, 0.7f, null);
-
             float hubY = (float)(spec.WheelRadius - spec.CgHeightM);
             for (int i = 0; i < 4; i++)
             {
                 bool front = i < 2;
-                float x = (i & 1) == 0 ? -(float)spec.TrackFrontM * 0.5f : (float)spec.TrackFrontM * 0.5f;
-                if (!front) x = (i & 1) == 0 ? -(float)spec.TrackRearM * 0.5f : (float)spec.TrackRearM * 0.5f;
+                float track = (float)(front ? spec.TrackFrontM : spec.TrackRearM);
+                float x = (i & 1) == 0 ? -track * 0.5f : track * 0.5f;
                 float z = front ? (float)spec.FrontAxleX : (float)spec.RearAxleX;
 
                 var steerGo = new GameObject($"Steer{i}");
@@ -75,7 +93,7 @@ namespace Race1.Game
                 var wf = spinGo.AddComponent<MeshFilter>();
                 wf.sharedMesh = wheelMesh;
                 var wr = spinGo.AddComponent<MeshRenderer>();
-                wr.sharedMaterials = new[] { tyre, rim };
+                wr.sharedMaterials = new[] { TyreMaterial, RimMaterial };
                 wr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             }
         }
@@ -132,12 +150,43 @@ namespace Race1.Game
             // Brake lights glow with the pedal: a fast attack, slower release.
             float target = (float)Mathf.Clamp01((float)tm.Brake);
             _brakeGlow = Mathf.MoveTowards(_brakeGlow, target, dt * (target > _brakeGlow ? 8f : 2f));
-            if (_lights != null && _lights.HasProperty("_EmissionColor"))
+            if (_lensMaterial != null && _lensMaterial.HasProperty("_EmissionColor"))
             {
-                _lights.SetColor("_EmissionColor", Color.Lerp(new Color(0.5f, 0.5f, 0.45f), new Color(2.4f, 0.2f, 0.1f), _brakeGlow));
+                _lensMaterial.SetColor("_EmissionColor", Color.Lerp(new Color(0.5f, 0.5f, 0.45f), new Color(2.4f, 0.2f, 0.1f), _brakeGlow));
+            }
+            if (_carLights != null)
+            {
+                _carLights.SetBrake(_brakeGlow);
             }
         }
 
         public static Vector3 ToFloat(Vector3d v) => new Vector3((float)v.X, (float)v.Y, (float)v.Z);
+
+        private static Material GlassMaterial
+        {
+            get
+            {
+                if (_glassMaterial == null) _glassMaterial = CarPaint.CreateGlass();
+                return _glassMaterial;
+            }
+        }
+
+        private static Material TyreMaterial
+        {
+            get
+            {
+                if (_tyreMaterial == null) _tyreMaterial = CarPaint.CreateTyre();
+                return _tyreMaterial;
+            }
+        }
+
+        private static Material RimMaterial
+        {
+            get
+            {
+                if (_rimMaterial == null) _rimMaterial = CarPaint.CreateRim();
+                return _rimMaterial;
+            }
+        }
     }
 }

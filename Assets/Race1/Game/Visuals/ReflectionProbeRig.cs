@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Race1.Game
 {
@@ -32,7 +33,6 @@ namespace Race1.Game
             _probe.boxProjection = true;
             _probe.intensity = 1f;
             _probe.importance = 1;
-            _probe.timeSlicing = false;
             _probe.clearFlags = ReflectionProbeClearFlags.Skybox;
             _probe.enabled = true;
 
