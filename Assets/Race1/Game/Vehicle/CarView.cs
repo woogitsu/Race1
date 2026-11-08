@@ -109,7 +109,10 @@ namespace Race1.Game
             WorldForward = forward;
             WorldUp = up;
 
-            transform.localPosition = ToFloat(position - origin);
+            // The model origin is the centre of gravity, which sits CgHeightM above the road. WorldPosition stays
+            // on the road so the camera and physics keep working with road-surface points.
+            Vector3 lift = ToFloat(up) * (float)_spec.CgHeightM;
+            transform.localPosition = ToFloat(position - origin) + lift;
             Vector3 fwd = ToFloat(forward);
             Vector3 upF = ToFloat(up);
             if (fwd.sqrMagnitude > 1e-6f && upF.sqrMagnitude > 1e-6f)

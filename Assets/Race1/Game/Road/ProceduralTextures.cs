@@ -196,6 +196,39 @@ namespace Race1.Game
             return dst;
         }
 
+        /// <summary>Bilinear upscale of a square tileable field. Sample positions wrap, so the result stays seamless.</summary>
+        internal static float[] UpsampleWrap(float[] src, int srcSize, int dstSize)
+        {
+            var dst = new float[dstSize * dstSize];
+            float scale = srcSize / (float)dstSize;
+            for (int y = 0; y < dstSize; y++)
+            {
+                float sy = (y + 0.5f) * scale - 0.5f;
+                int y0 = (int)Mathf.Floor(sy);
+                float fy = sy - y0;
+                int rowA = WrapIndex(y0, srcSize) * srcSize;
+                int rowB = WrapIndex(y0 + 1, srcSize) * srcSize;
+                for (int x = 0; x < dstSize; x++)
+                {
+                    float sx = (x + 0.5f) * scale - 0.5f;
+                    int x0 = (int)Mathf.Floor(sx);
+                    float fx = sx - x0;
+                    int xa = WrapIndex(x0, srcSize);
+                    int xb = WrapIndex(x0 + 1, srcSize);
+                    float top = src[rowA + xa] + (src[rowA + xb] - src[rowA + xa]) * fx;
+                    float bottom = src[rowB + xa] + (src[rowB + xb] - src[rowB + xa]) * fx;
+                    dst[y * dstSize + x] = top + (bottom - top) * fy;
+                }
+            }
+            return dst;
+        }
+
+        private static int WrapIndex(int i, int n)
+        {
+            int m = i % n;
+            return m < 0 ? m + n : m;
+        }
+
         private static float Percentile(int[] hist, int total, double fraction, float min, float range)
         {
             long target = (long)(total * fraction);
@@ -314,7 +347,11 @@ namespace Race1.Game
             Size = size;
             Salt = (uint)(seed ^ (seed >> 32)) ^ 0x51ED270Bu;
             Height = ProceduralTextures.Stretch(TextureUtil.TileableFbm(DeterministicRng.Combine(seed, 0xA5F1UL), size, 16, 4, 0.5));
-            Patch = ProceduralTextures.Stretch(TextureUtil.TileableFbm(DeterministicRng.Combine(seed, 0x7A4BUL), size, 8, 3, 0.5));
+
+            // The patch field is smooth, so it is generated at half resolution and upscaled. That saves most of the noise cost.
+            int half = size / 2;
+            float[] patch = ProceduralTextures.Stretch(TextureUtil.TileableFbm(DeterministicRng.Combine(seed, 0x7A4BUL), half, 8, 3, 0.5));
+            Patch = ProceduralTextures.UpsampleWrap(patch, half, size);
         }
     }
 }
