@@ -46,6 +46,7 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
   asysta kierownicy, aero, opór toczenia, bariera z kolizją.
 - Trzy samochody o różnym charakterze (`VehicleCatalog`), oryginalne nazwy.
 - Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), testy w CoreTests.
+- Harmonogram pogody i pory dnia (`WeatherSchedule`): deterministyczne przejścia pogody i godzina doby; testy płynności, testy w CoreTests. Jeszcze nie podpięty do GameSession.
 - Strojenie aut w garażu (`VehicleTuning`): sprężyny, tłumienie, przełożenie, hamulce i mieszanka opon z limitami zakresów; testy w CoreTests.
 - Ruch AI (IDM), zmiana pasa z przerwą, reakcja na gracza, zdarzenia wyprzedzania i bliskiego mijania.
 - Kamery: chase, bumper, hood, cockpit, cinematic (krytycznie tłumione, bez przeregulowania).

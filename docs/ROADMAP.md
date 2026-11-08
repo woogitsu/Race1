@@ -41,7 +41,7 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
   zakresów. Test: zakresy są respektowane, a zapis/odczyt zachowuje wartości.
 - [x] **C2. Tryb wyścigu AI.** Przeciwnicy na drodze z pozycjami w wyścigu (`RaceDirector`):
   kolejność po dystansie wzdłuż drogi, czasy okrążenia/odcinka. Testy kolejności i zakończenia.
-- [ ] **C3. Pogoda i pora dnia w czasie.** Harmonogram zmian pogody i godziny (`WeatherSchedule`),
+- [x] **C3. Pogoda i pora dnia w czasie.** Harmonogram zmian pogody i godziny (`WeatherSchedule`),
   deterministyczny z seedem. Testy: płynność parametrów, brak skoków przy przejściach.
 - [ ] **C4. Ruch AI bez kolizji z graczem przy hamowaniu.** Reakcja AI na gracza (hamowanie przed
   pojazdem przed sobą, unik przy zbliżaniu się). Test: w scenariuszu z graczem hamującym liczba
@@ -75,6 +75,7 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
 
+- 2026-11-08 (uruchomienie 3, cykl godzinny) — C3 zrobione: `WeatherSchedule` (łańcuch Markowa pogody z segmentami 4–10 min gry, deterministyczny z ziarnem, śnieg tylko w zimie, bez przejść do siebie) i `HourAt` (godzina doby z zawijaniem). Test płynności: parametry pogody nie zmieniają się szybciej niż pozwala stała czasowa mieszania. Testy: CoreTests 103/103 (10 nowych w WeatherScheduleTests), UnityCheck bez błędów. Harmonogram nie jest jeszcze podpięty do GameSession (zrobi to punkt G2 lub osobny wpis). Następny: C4 (ruch AI bez kolizji z graczem przy hamowaniu).
 - 2026-11-08 (uruchomienie 2, cykl godzinny) — C2 zrobione: `RaceDirector` (kolejność po dystansie, kolejność na mecie z interpolacją czasu przekroczenia linii, odstępy do lidera, remisy po Id) i `AiRacerModel` (IDM za najbliższym autem w tym samym pasie, trzy poziomy tempa). Pasy zapobiegają kolejkowaniu się wszystkich AI za jednym autem. Testy: CoreTests 93/93 (13 nowych w RaceDirectorTests), UnityCheck bez błędów. Następny: C3 (harmonogram pogody i pory dnia).
 - 2026-11-08 (uruchomienie 1) — C1 zrobione: `VehicleTuning.Apply` (Core/Garage) z limitami zakresów, bez zmiany bazowego auta, normalizacja rekordu zapisu. Testy: CoreTests 80/80 (9 nowych w VehicleTuningTests), UnityCheck bez błędów. Następny: C2 (tryb wyścigu AI).
 - 2026-11-08 — Utworzono plan prac i cykliczne uruchamianie co godzinę. Stan wyjściowy: testy 71/71,
