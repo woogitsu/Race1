@@ -79,6 +79,7 @@ namespace Race1.Game
         private int _showroomPaint = -1;
         private CarView _playerView;
         private EngineAudio _engineAudio;
+        private AmbientAudio _ambient;
         private TrafficView _trafficView;
         private TrafficSimulation _traffic;
         private VehicleDynamics _player;
@@ -299,6 +300,9 @@ namespace Race1.Game
             _reflectionRig = new ReflectionProbeRig(_worldRoot);
             _post = new PostProcessingController();
             _photo = new PhotoMode(_cam);
+            var ambientGo = new GameObject("AmbientAudio");
+            ambientGo.transform.SetParent(_worldRoot, false);
+            _ambient = ambientGo.AddComponent<AmbientAudio>();
         }
 
         // ----- States -----
@@ -306,6 +310,7 @@ namespace Race1.Game
         private void EnterMenu()
         {
             _state = AppState.Menu;
+            SilenceAmbient();
             _worldRoot.gameObject.SetActive(false);
             _showroomRoot.gameObject.SetActive(true);
             _hud.SetVisible(false);
@@ -430,6 +435,7 @@ namespace Race1.Game
             _state = AppState.Paused;
             _menu.ShowPause();
             _hud.SetVisible(false);
+            SilenceAmbient();
             SaveNow();
         }
 
@@ -554,6 +560,17 @@ namespace Race1.Game
 
             _engineAudio.Set(tm.EngineRpm, tm.Throttle, 0.55);
 
+            // Ambient sound: wind from the speed, squeal from the worst tyre's slip, rain from the weather.
+            double squeal = 0.0;
+            for (int i = 0; i < 4; i++)
+            {
+                squeal = System.Math.Max(squeal, AmbientSoundModel.SquealLevel(tm.SlipAngle[i], tm.SlipRatio[i]));
+            }
+            if (_ambient != null)
+            {
+                _ambient.Set(AmbientSoundModel.WindLevel(tm.SpeedMs), squeal, AmbientSoundModel.RainLevel(_weather.Rain));
+            }
+
             // Camera effects: shake, roll and FOV kick from the car's motion.
             CameraEffectsOutput fx = _cameraEffects.Step(new CameraEffectsInput
             {
@@ -594,6 +611,12 @@ namespace Race1.Game
             _hud.Tick(dt, BuildHudState(tm));
         }
 
+        /// <summary>The ambient sound stops whenever the car is not being driven: paused, in photo mode, or in the menu.</summary>
+        private void SilenceAmbient()
+        {
+            if (_ambient != null) _ambient.Set(0.0, 0.0, 0.0);
+        }
+
         // ----- Garage tuning -----
 
         /// <summary>The car selected in the garage. Tuning edits apply to it. They reach the disk at the next save.</summary>
@@ -624,6 +647,7 @@ namespace Race1.Game
         {
             _state = AppState.Photo;
             _hud.SetVisible(false);
+            SilenceAmbient();
             _menu.ShowPhoto();
             UpdatePhotoInfo(null);
         }

@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **171/171 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **182/182 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -66,6 +66,9 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Layout ekranu (klasy Cover/Unfolded/Tablet/Phone), kontrolki w bezpiecznym obszarze.
 - Niebo: pozycja słońca z szerokości, daty i godziny; noc, złota godzina; pogoda z mokrą nawierzchnią.
 - Dźwięk silnika: syntezator harmoniczny, zależny od obrotów i obciążenia.
+- Dźwięki otoczenia (`AmbientSynth`, `AmbientSoundModel`): wiatr rosnący z prędkością, pisk opon z poślizgu
+  kąta i współczynnika, deszcz z kropli i szumu wysokoczęstotliwościowego. Testy w AmbientSoundTests, w tym
+  pasmo sygnału zmierzone algorytmem Goertzela.
 - Tryby: Time Attack (sektory, najlepszy czas), Traffic Challenge (punktacja, mnożnik, kary).
 - Zapis: wersjonowany, z migracją, bez utraty nieznanych danych, atomowy zapis.
 
@@ -83,6 +86,8 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Kamery i przełączanie widoków; HUD (prędkość, bieg, obrotomierz, asysty, tryb, pogoda, flash kolizji).
 - Kontrolki dotykowe (pady, gaz, hamulec, ręczny, biegi, widok, pauza) oraz pad, klawiatura i przechył.
 - Silnik audio przez `OnAudioFilterRead` z buforem przydzielonym raz.
+- Dźwięki otoczenia (`AmbientAudio`): wiatr, pisk opon i deszcz z tej samej syntezy. Wyciszane w pauzie,
+  trybie foto i menu. Nie sprawdzono słuchem na urządzeniu.
 - Menu: start, pauza, garaż z obracającym się autem, wybór trybu/auta/lakieru/pogody/pory dnia/asyst.
 - Woda przybrzeżna: siatka per chunk poza krawędzią drogi (`CoastWaterBuilder`), tylko tam, gdzie biom Coast
   dominuje i teren leży poniżej 0 m. Shader `Race1/Water` (Fresnel, piana z koloru wierzchołków). Gdy shadera
@@ -150,8 +155,9 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - Model nie zawiera sił bocznych wiatru ani aerodynamiki zależnej od pochylenia nadwozia.
 
 ### Dźwięk
-- Silnik jest syntetyczny (brak nagrań i miksu przestrzennego). Brak dźwięków opon, wiatru,
-  deszczu, zderzeń i przełączania biegów (poza zmianą obrotów).
+- Dźwięki są syntetyczne (brak nagrań i miksu przestrzennego). Wiatr, pisk opon i deszcz są, ale nie
+  były słyszane, więc poziomy i barwa są nieskalibrowane. Brak dźwięków zderzeń i przełączania biegów
+  (poza zmianą obrotów).
 - Dźwięk nie reaguje na pozycję kamery (kokpit vs zewnętrzna).
 
 ### Urządzenie i wydajność

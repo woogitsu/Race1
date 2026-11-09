@@ -69,8 +69,9 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
   w Game (`CoastWaterBuilder`), shader `Race1/Water`. Woda jest rzadka: patrz dziennik.
 - [x] **G6. Mosty i tunele w geometrii.** Filary pod mostami (flaga `Bridge`), tuba tunelu dla flagi C5.
   Geometria w Core (`StructureGeometry`, testy), filary i obudowa w Game (`StructureProps`). Nieobejrzane.
-- [ ] **G7. Dźwięki otoczenia.** Szum opon na poślizgu, wiatr zależny od prędkości, deszcz (pętla)
-  generowane przez `EngineSynth`-podobne syntezatory w Core, odtwarzane w Game.
+- [x] **G7. Dźwięki otoczenia.** Szum opon na poślizgu, wiatr zależny od prędkości, deszcz (pętla)
+  generowane przez `EngineSynth`-podobne syntezatory w Core, odtwarzane w Game. Poziomy w `AmbientSoundModel`,
+  synteza w `AmbientSynth` (Core, testy), odtwarzanie w `AmbientAudio` (Game). Nie słyszane.
 - [ ] **G8. Poziomy szczegółów aut.** LOD (`LODGroup`) z uproszczoną karoserią dla dalekich aut.
 - [ ] **G9. Budżet wydajności.** Limity: chunki, instancje roślinności, liczba świateł, cienie.
   Zapisane w `RaceConfig` i wymuszane przez `PerformanceDirector`.
@@ -80,6 +81,17 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 13, cykl godzinny) — G7 zrobione. Core: `AmbientSoundModel` (poziom wiatru rośnie od
+  15 do 90 m/s; pisk opon od sumy kąta i współczynnika poślizgu 0,10 do 0,30; poziom deszczu z zakresu 0–1) oraz
+  `AmbientSynth` (wiatr: szum przez filtr dolnoprzepustowy, którego częstotliwość graniczna rośnie z poziomem; pisk:
+  szum przez pasmowy filtr 2 kHz, Q 6; deszcz: szum powyżej 1,2 kHz i kropelki jako pochodna impulsu). Pierwsza wersja
+  kropelek była jaśniejsza od szumu tylko w niskich tonach, więc test pasma odrzucił ją. Kropelki zmieniono na
+  pochodną o zaniku 0,2 ms. Game: `AmbientAudio` (wzorzec jak w `EngineAudio`, wartości przez `volatile`), zasilany
+  co klatkę z prędkości, najgorszego poślizgu czterech opon i opadów. Wyciszany w pauzie, trybie foto i menu.
+  Testy: CoreTests 182/182 (11 nowych w AmbientSoundTests, w tym pasmo mierzone algorytmem Goertzela). UnityCheck bez
+  błędów. Nie sprawdzono słuchem na urządzeniu: poziomów, barwy ani tego, czy pisk nie jest zbyt ostry. Następny:
+  G8 (poziomy szczegółów aut).
 
 - 2026-11-09 (uruchomienie 12, cykl godzinny) — G6 zrobione, z zastrzeżeniami. Core: `StructureGeometry` (rozstaw
   filarów co 24 m, wysokość filara od gruntu do spodu pomostu z grubością 0,9 m, minimum 2 m, profil obudowy tunelu
