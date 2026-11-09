@@ -135,6 +135,10 @@ namespace Race1.Game
             _menu.Build(File.Exists(_saveService.FilePath));
             _menu.Chosen = OnMenuChoice;
             _menu.PhotoDragged = OnPhotoDragged;
+            _menu.TuningLookup = id => VehicleTuningStore.Read(_save, id);
+            _menu.TuningSlid = OnTuningSlid;
+            _menu.TyresCycled = OnTyresCycled;
+            _menu.TuningReset = OnTuningReset;
             EnterMenu();
         }
 
@@ -350,7 +354,8 @@ namespace Race1.Game
         {
             MenuOptions opts = _menu.Options;
             _mode = mode;
-            _spec = VehicleCatalog.Create(VehicleCatalog.Ids[opts.CarIndex]);
+            string carId = VehicleCatalog.Ids[opts.CarIndex];
+            _spec = VehicleTuning.Apply(VehicleCatalog.Create(carId), VehicleTuningStore.Read(_save, carId));
             _save.SelectedVehicleId = _spec.Id;
             _weather.SetKind((WeatherKind)opts.WeatherIndex);
             _hour = MenuOptions.Hours[opts.HourIndex];
@@ -574,6 +579,29 @@ namespace Race1.Game
             }
 
             _hud.Tick(dt, BuildHudState(tm));
+        }
+
+        // ----- Garage tuning -----
+
+        /// <summary>The car selected in the garage. Tuning edits apply to it. They reach the disk at the next save.</summary>
+        private string CurrentCarId() => VehicleCatalog.Ids[_menu.Options.CarIndex];
+
+        private void OnTuningSlid(TuningKnob knob, double position)
+        {
+            VehicleTuningStore.SetFromSlider(_save, CurrentCarId(), knob, position);
+            _menu.Refresh();
+        }
+
+        private void OnTyresCycled()
+        {
+            VehicleTuningStore.CycleTyres(_save, CurrentCarId());
+            _menu.Refresh();
+        }
+
+        private void OnTuningReset()
+        {
+            VehicleTuningStore.Reset(_save, CurrentCarId());
+            _menu.Refresh();
         }
 
         // ----- Photo mode -----

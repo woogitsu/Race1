@@ -62,8 +62,8 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
   Logika w Core (`RivalRace`, testy), tryb `AiRace` w menu i w sesji (`GameSession`, `RaceConfig`).
 - [x] **G3. Tryb fotograficzny.** (Orbita i ogniskowa w Core, `PhotoOrbit`; tryb w pauzie w Game.) Pauza > „Photo”: swobodna kamera orbitalna, zmiana FOV i ogniskowej,
   zapis zrzutu (`ScreenCapture`) do `persistentDataPath`.
-- [ ] **G4. Garaż z tuningiem.** Suwaki sprężyn, tłumienia, przełożeń w menu, zapis do `VehicleTuningData`
-  (po C1).
+- [x] **G4. Garaż z tuningiem.** Suwaki sprężyn, tłumienia, przełożeń w menu, zapis do `VehicleTuningData`
+  (po C1). Logika w Core (`TuningControls`, `VehicleTuningStore`, testy), panel TUNING w garażu w Game.
 - [ ] **G5. Woda na wybrzeżu.** Płaszczyzna wody poniżej poziomu morza w biomie Coast, prosty shader
   z odbiciem Fresnela, pianka na linii brzegu.
 - [ ] **G6. Mosty i tunele w geometrii.** Filary pod mostami (flaga `Bridge`), tuba tunelu dla flagi C5.
@@ -78,6 +78,17 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 10, cykl godzinny) — G4 zrobione. Core: `TuningControls` (suwak 0–1 ↔ wartość w zakresie
+  z C1, procentowa zmiana od fabrycznej, odczyt i zapis jednego pokrętła w rekordzie, cykl opon) oraz
+  `VehicleTuningStore` (jeden rekord na auto w `SaveData.Tunings`, tworzony przy pierwszej edycji; odczyt nie zmienia
+  zapisu). Game: w garażu przycisk TUNING otwiera panel z czterema suwakami, przełącznikiem opon, RESET i BACK.
+  Start przejazdu używa strojonego auta. Naprawa przy okazji: garaż nie był ukrywany w pauzie ani w trybie foto,
+  więc był widoczny i klikalny nad ekranem pauzy i zdjęcia. Teraz jest ukrywany w obu tych stanach.
+  Testy: CoreTests 158/158 (13 nowych w GarageTuningTests, w tym losowe edycje, które nigdy nie wychodzą poza
+  zakresy). UnityCheck bez błędów. Nie sprawdzono w Unity: układu panelu, przeciągania suwaków, zapisu do pliku
+  i tego, czy tuning zmienia prowadzenie. Zmiany trafiają na dysk przy najbliższym `SaveNow` (autosave co 30 s,
+  pauza, wyjście). Następny: G5 (woda na wybrzeżu).
 
 - 2026-11-09 (uruchomienie 9, cykl godzinny) — G3 zrobione. Core: `PhotoOrbit` (orbita wokół auta, obrót
   przeciąganiem z kątem ograniczonym do −2°…70°, zoom 3–40 m, ogniskowa 14–200 mm, FOV pionowy z 24 mm

@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **145/145 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **158/158 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -57,7 +57,7 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
   (`PhotoShots`); testy w PhotoOrbitTests.
 - Ruch AI: unik na wielopasmowych drogach, bezpieczna luka przy zmianie pasa, testy scenariuszy z hamującym graczem (`TrafficEvasionTests`). Ograniczenie: na dwupasmowej drodze auto nie ma gdzie uciec, więc gracz jadący bez hamowania w wolniejsze auto uderzy.
 - Harmonogram pogody i pory dnia (`WeatherSchedule`): deterministyczne przejścia pogody i godzina doby; testy płynności, testy w CoreTests. Jeszcze nie podpięty do GameSession.
-- Strojenie aut w garażu (`VehicleTuning`): sprężyny, tłumienie, przełożenie, hamulce i mieszanka opon z limitami zakresów; testy w CoreTests.
+- Strojenie aut w garażu (`VehicleTuning`): sprężyny, tłumienie, przełożenie, hamulce i mieszanka opon z limitami zakresów. Suwaki i zapis per auto w save (`TuningControls`, `VehicleTuningStore`); testy w GarageTuningTests.
 - Ruch AI (IDM), zmiana pasa z przerwą, reakcja na gracza, zdarzenia wyprzedzania i bliskiego mijania.
 - Kamery: chase, bumper, hood, cockpit, cinematic (krytycznie tłumione, bez przeregulowania).
 - Governor jakości z histerezą, reakcją na termikę i baterię.
@@ -83,6 +83,9 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Kontrolki dotykowe (pady, gaz, hamulec, ręczny, biegi, widok, pauza) oraz pad, klawiatura i przechył.
 - Silnik audio przez `OnAudioFilterRead` z buforem przydzielonym raz.
 - Menu: start, pauza, garaż z obracającym się autem, wybór trybu/auta/lakieru/pogody/pory dnia/asyst.
+- Garaż z tuningiem (TUNING): suwaki sprężyn, tłumienia, przełożenia i hamulców z procentową zmianą względem
+  fabrycznej, wybór opon i RESET. Ustawienia są zapisane per auto w save i używane przy starcie przejazdu.
+  Nie sprawdzono w Unity: układu, przeciągania suwaków i zapisu na urządzeniu.
 - Platforma: odczyt safe area, odświeżania, baterii; termika Androida przez JNI (tylko na Androidzie).
 - Wydajność: skala renderowania URP, liczba chunków, MSAA, docelowy FPS według poziomu.
 - Latarnie: głowy instancjonowane (świecą nocą) i pula do N prawdziwych świateł punktowych
@@ -113,8 +116,9 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - **Tryb AI Race: balans nie został zmierzony.** W testach najszybszy rywal na 3000 m jedzie 78–85 s
   w zależności od trudności, a gracz nie był mierzony.
 - **Free Ride** to Endless Drive z wyborem pogody i pory dnia; brak suwaków trudności i gęstości ruchu w menu.
-- **Strojenie auta w garażu nie jest wystawione w UI** (sprężyny, przełożenia, zawieszenie). Model
-  to przyjmuje (`VehicleSpec`, `VehicleTuningData`), ale nie ma ekranów.
+- **Strojenie auta w garażu:** suwaki sprężyn, tłumienia, przełożenia i hamulców są w menu, ale nie
+  pokazują zmiany prowadzenia. Zawieszenie nie ma osobnej regulacji wysokości. Wpływ strojenia na balans
+  nie został zmierzony.
 - **Brak powtórek i nagrywania.** Kamera filmowa działa na żywo.
 - **Ruch AI nie gwarantuje braku kolizji z graczem:** w testach 2-minutowych bez hamowania było
   7 kontaktów. Samochody zmieniające pas nie przewidują wszystkich sytuacji.
@@ -178,7 +182,8 @@ zasłaniające typy `Text` i `Button`.
 4. Dodać tunele (tuba), mosty (filary), wodę i barierki.
 5. Sprawdzić w Unity tryb AI Race i Photo Mode (kadr, zrzut do `persistentDataPath`, koszt). Oba są
    zaimplementowane, ale nieuruchomione.
-6. Wystawić strojenie auta w garażu (sprężyny, przełożenia, zapis w `VehicleTuningData`).
+6. Sprawdzić w Unity panel TUNING (układ, przeciąganie suwaków, zapis, start z tuningiem) i zmierzyć,
+   czy zmiany sprężyn i przełożeń dają wyczuwalną różnicę w prowadzeniu.
 
 ## Tabela testów urządzeniowych (do uzupełnienia)
 

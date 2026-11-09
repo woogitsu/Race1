@@ -65,10 +65,25 @@ namespace Race1.Game
         /// <summary>Drag across the photo-mode surface, as pixel deltas (x right, y down).</summary>
         public Action<double, double> PhotoDragged;
 
+        /// <summary>Saved tuning of a car, for the garage to show. Null or missing values read as neutral.</summary>
+        public Func<string, VehicleTuningData> TuningLookup;
+
+        /// <summary>A tuning slider moved: the knob and its position (0..1).</summary>
+        public Action<TuningKnob, double> TuningSlid;
+
+        public Action TyresCycled;
+        public Action TuningReset;
+
         private Canvas _canvas;
         private RectTransform _mainPanel;
         private RectTransform _pausePanel;
         private RectTransform _photoPanel;
+        private RectTransform _garagePanel;
+        private RectTransform _tuningPanel;
+        private Text _tuningCar;
+        private Text[] _knobLabels;
+        private TuningSlider[] _knobSliders;
+        private Text _tyreLabel;
         private Text _photoInfo;
         private Text _photoStatus;
         private Text _carLine;
@@ -107,6 +122,7 @@ namespace Race1.Game
             MenuButton(_mainPanel, new RectN(0.05, y, 0.9, 0.08), "AI RACE", () => { Options.Mode = GameMode.AiRace; Chosen?.Invoke(MenuAction.StartRun); });
 
             var garage = Panel(rootRt, new RectN(0.6, 0.08, 0.34, 0.84), new Color(0.04f, 0.05f, 0.07f, 0.6f));
+            _garagePanel = garage;
             _carLine = TextLabel(garage, new RectN(0.05, 0.03, 0.9, 0.07), "", 44, TextAnchor.MiddleLeft);
             _specLine = TextLabel(garage, new RectN(0.05, 0.11, 0.9, 0.12), "", 26, TextAnchor.UpperLeft);
             MenuButton(garage, new RectN(0.05, 0.3, 0.42, 0.07), "< CAR", () => { Options.CarIndex = Wrap(Options.CarIndex - 1, VehicleCatalog.Ids.Count); Refresh(); });
@@ -115,9 +131,11 @@ namespace Race1.Game
             MenuButton(garage, new RectN(0.53, 0.4, 0.42, 0.07), "WEATHER", () => { Options.WeatherIndex = Wrap(Options.WeatherIndex + 1, MenuOptions.Weather.Length); Refresh(); });
             MenuButton(garage, new RectN(0.05, 0.5, 0.42, 0.07), "TIME OF DAY", () => { Options.HourIndex = Wrap(Options.HourIndex + 1, MenuOptions.Hours.Length); Refresh(); });
             MenuButton(garage, new RectN(0.53, 0.5, 0.42, 0.07), "ASSISTS", () => { Options.AssistIndex = Wrap(Options.AssistIndex + 1, MenuOptions.Assists.Length); Refresh(); });
-            MenuButton(garage, new RectN(0.05, 0.6, 0.9, 0.07), "TRAFFIC: ON/OFF", () => { Options.TrafficOn = !Options.TrafficOn; Refresh(); });
+            MenuButton(garage, new RectN(0.05, 0.6, 0.42, 0.07), "TRAFFIC", () => { Options.TrafficOn = !Options.TrafficOn; Refresh(); });
+            MenuButton(garage, new RectN(0.53, 0.6, 0.42, 0.07), "TUNING", () => { RefreshTuning(); ShowTuning(); });
             _optionLine = TextLabel(garage, new RectN(0.05, 0.7, 0.9, 0.12), "", 26, TextAnchor.UpperLeft);
             _bestLine = TextLabel(garage, new RectN(0.05, 0.84, 0.9, 0.12), "", 26, TextAnchor.UpperLeft);
+            BuildTuningPanel(rootRt);
 
             _pausePanel = Panel(rootRt, new RectN(0.35, 0.22, 0.3, 0.6), new Color(0.02f, 0.03f, 0.05f, 0.9f));
             TextLabel(_pausePanel, new RectN(0.05, 0.03, 0.9, 0.12), "PAUSED", 56, TextAnchor.MiddleCenter);
@@ -150,6 +168,8 @@ namespace Race1.Game
             _mainPanel.gameObject.SetActive(true);
             _pausePanel.gameObject.SetActive(false);
             _photoPanel.gameObject.SetActive(false);
+            _garagePanel.gameObject.SetActive(true);
+            _tuningPanel.gameObject.SetActive(false);
         }
 
         public void ShowPause()
@@ -158,6 +178,8 @@ namespace Race1.Game
             _mainPanel.gameObject.SetActive(false);
             _pausePanel.gameObject.SetActive(true);
             _photoPanel.gameObject.SetActive(false);
+            _garagePanel.gameObject.SetActive(false);
+            _tuningPanel.gameObject.SetActive(false);
         }
 
         public void ShowPhoto()
@@ -166,6 +188,8 @@ namespace Race1.Game
             _mainPanel.gameObject.SetActive(false);
             _pausePanel.gameObject.SetActive(false);
             _photoPanel.gameObject.SetActive(true);
+            _garagePanel.gameObject.SetActive(false);
+            _tuningPanel.gameObject.SetActive(false);
         }
 
         /// <summary>Hides the photo controls while a shot is taken, so they stay out of the picture.</summary>
@@ -195,7 +219,8 @@ namespace Race1.Game
 
         public void Refresh()
         {
-            VehicleSpec spec = VehicleCatalog.Create(VehicleCatalog.Ids[Options.CarIndex]);
+            string carId = VehicleCatalog.Ids[Options.CarIndex];
+            VehicleSpec spec = VehicleTuning.Apply(VehicleCatalog.Create(carId), TuningLookup?.Invoke(carId));
             _carLine.text = spec.DisplayName;
             _specLine.text = $"Mass {spec.Mass:F0} kg\nDrive {spec.Drive}\nGears {spec.GearRatios.Length}\n" +
                              $"Peak torque {MaxOf(spec.TorquePoints):F0} Nm\nGrip {spec.GripDry:F2}";
@@ -204,6 +229,7 @@ namespace Race1.Game
                                $"Time {MenuOptions.Hours[Options.HourIndex]:F1} h\n" +
                                $"Assists {MenuOptions.Assists[Options.AssistIndex]}\n" +
                                $"Traffic {(Options.TrafficOn ? "on" : "off")}";
+            RefreshTuning();
         }
 
         private static double MaxOf(double[] values)
@@ -214,6 +240,103 @@ namespace Race1.Game
         }
 
         private static int Wrap(int v, int count) => ((v % count) + count) % count;
+
+        /// <summary>
+        /// Tuning overlay on top of the garage: a slider per knob, a tyre choice, reset and back. It edits the car
+        /// selected in the garage, through <see cref="TuningSlid"/>, <see cref="TyresCycled"/> and <see cref="TuningReset"/>.
+        /// </summary>
+        private void BuildTuningPanel(RectTransform rootRt)
+        {
+            _tuningPanel = Panel(rootRt, new RectN(0.6, 0.08, 0.34, 0.84), new Color(0.04f, 0.05f, 0.07f, 0.97f));
+            TextLabel(_tuningPanel, new RectN(0.05, 0.02, 0.9, 0.07), "TUNING", 44, TextAnchor.MiddleLeft);
+            _tuningCar = TextLabel(_tuningPanel, new RectN(0.05, 0.09, 0.9, 0.06), "", 28, TextAnchor.MiddleLeft);
+
+            _knobLabels = new Text[TuningControls.KnobCount];
+            _knobSliders = new TuningSlider[TuningControls.KnobCount];
+            for (int i = 0; i < TuningControls.KnobCount; i++)
+            {
+                var knob = (TuningKnob)i;
+                double y = 0.18 + i * 0.13;
+                _knobLabels[i] = TextLabel(_tuningPanel, new RectN(0.05, y, 0.9, 0.05), "", 30, TextAnchor.MiddleLeft);
+                RectTransform bar = Panel(_tuningPanel, new RectN(0.05, y + 0.06, 0.9, 0.035), new Color(0.16f, 0.18f, 0.22f, 1f));
+                RectTransform fill = Panel(bar, new RectN(0, 0, 1, 1), new Color(0.85f, 0.2f, 0.18f, 1f));
+                fill.GetComponent<Image>().raycastTarget = false;
+                TuningSlider slider = bar.gameObject.AddComponent<TuningSlider>();
+                slider.Init(bar, fill);
+                slider.Moved = p => TuningSlid?.Invoke(knob, p);
+                _knobSliders[i] = slider;
+            }
+
+            _tyreLabel = MenuButton(_tuningPanel, new RectN(0.05, 0.72, 0.9, 0.08), "", () => TyresCycled?.Invoke());
+            MenuButton(_tuningPanel, new RectN(0.05, 0.84, 0.43, 0.08), "RESET", () => TuningReset?.Invoke());
+            MenuButton(_tuningPanel, new RectN(0.52, 0.84, 0.43, 0.08), "BACK", HideTuning);
+            _tuningPanel.gameObject.SetActive(false);
+        }
+
+        private void ShowTuning() => _tuningPanel.gameObject.SetActive(true);
+
+        private void HideTuning() => _tuningPanel.gameObject.SetActive(false);
+
+        /// <summary>Shows the saved tuning of the car selected in the garage on the sliders and the tyre line.</summary>
+        private void RefreshTuning()
+        {
+            if (_knobSliders == null) return;
+            string id = VehicleCatalog.Ids[Options.CarIndex];
+            VehicleTuningData data = TuningLookup?.Invoke(id);
+            _tuningCar.text = VehicleCatalog.Create(id).DisplayName;
+            for (int i = 0; i < TuningControls.KnobCount; i++)
+            {
+                var knob = (TuningKnob)i;
+                float value = TuningControls.Read(data, knob);
+                _knobSliders[i].SetPosition(TuningControls.ToPosition(knob, value));
+                _knobLabels[i].text = TuningControls.Label(knob) + "   " + TuningControls.Readout(value);
+            }
+            _tyreLabel.text = "TYRES: " + TuningControls.TyreName(data == null ? VehicleTuning.TireStandard : (int)Math.Round(data.TireCompound));
+        }
+
+        /// <summary>
+        /// A horizontal slider: a bar with a fill whose right edge marks the position. The pointer's x on the bar is
+        /// the value, reported as 0..1 while the pointer is pressed or dragged.
+        /// </summary>
+        public sealed class TuningSlider : MonoBehaviour, IPointerDownHandler, IDragHandler
+        {
+            public Action<double> Moved;
+
+            private RectTransform _bar;
+            private RectTransform _fill;
+
+            public void Init(RectTransform bar, RectTransform fill)
+            {
+                _bar = bar;
+                _fill = fill;
+            }
+
+            public void SetPosition(double position)
+            {
+                if (_fill == null) return;
+                float p = (float)Math.Max(0.0, Math.Min(1.0, position));
+                _fill.anchorMin = Vector2.zero;
+                _fill.anchorMax = new Vector2(p, 1f);
+                _fill.offsetMin = Vector2.zero;
+                _fill.offsetMax = Vector2.zero;
+            }
+
+            public void OnPointerDown(PointerEventData e) => Report(e);
+
+            public void OnDrag(PointerEventData e) => Report(e);
+
+            private void Report(PointerEventData e)
+            {
+                if (_bar == null) return;
+                var corners = new Vector3[4];
+                _bar.GetWorldCorners(corners);
+                float width = corners[2].x - corners[0].x;
+                if (!(width > 0f)) return;
+                double p = Math.Max(0.0, Math.Min(1.0, (e.position.x - corners[0].x) / width));
+                SetPosition(p);
+                Moved?.Invoke(p);
+            }
+        }
 
         /// <summary>Full-screen drag area for photo mode. Reports each drag step as a pixel delta.</summary>
         public sealed class PhotoDragSurface : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
@@ -263,14 +386,14 @@ namespace Race1.Game
             return t;
         }
 
-        private void MenuButton(RectTransform parent, RectN r, string label, Action onClick)
+        private Text MenuButton(RectTransform parent, RectN r, string label, Action onClick)
         {
             var go = new GameObject("Button_" + label, typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             go.GetComponent<Image>().color = new Color(0.16f, 0.18f, 0.22f, 0.95f);
             go.GetComponent<Button>().onClick.AddListener(() => onClick());
             OnScreenControls.Place(go.GetComponent<RectTransform>(), r);
-            TextLabel(go.GetComponent<RectTransform>(), new RectN(0, 0, 1, 1), label, 34, TextAnchor.MiddleCenter);
+            return TextLabel(go.GetComponent<RectTransform>(), new RectN(0, 0, 1, 1), label, 34, TextAnchor.MiddleCenter);
         }
     }
 }
