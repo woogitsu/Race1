@@ -105,6 +105,13 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
 
+- 2026-11-09 (uruchomienie 26, cykl godzinny) — kolejka nadal pusta: wszystkie punkty C, G i H są `[x]`, więc nic nie
+  wdrożono. Nie dodano nowego zakresu, bo wybór należy do właściciela (propozycje w uruchomieniu 21). Weryfikacja:
+  CoreTests 232/232, UnityCheck bez błędów, drzewo czyste, gałąź zgodna z origin. Wpis z poprzedniego przebiegu
+  został pominięty, więc ten dopisuje go zbiorczo. Blokady bez zmian: brak Unity Editora i urządzenia; licencja
+  Unity po stronie użytkownika.
+
+
 - 2026-11-09 (uruchomienie 25, cykl godzinny) — kolejka nadal pusta, bez nowych commitów na gałęzi. Weryfikacja:
   CoreTests 232/232, UnityCheck bez błędów. Blokady bez zmian (brak Unity Editora i urządzenia). Uwaga: od kilku
   przebiegów wpisy są identyczne; decyzja o dalszym zadaniu cyklicznym należy do właściciela.
