@@ -92,9 +92,10 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 - [x] **H2. Krople na szybie w deszczu.** Core: `WindscreenWetness` (rośnie z deszczem, maleje z prędkością,
   dokładne rozwiązanie równania), `WindscreenDroplets` (układ kropli z ziarna), testy w WindscreenTests.
   Game: `WindscreenOverlay` pokazuje krople w widoku z kokpitu. Nieobejrzane.
-- [ ] **H3. Ślady opon na poślizgu.** Core: `SkidMarkModel.Intensity(squealLevel)` oraz odstęp śladów wzdłuż
-  drogi. Game: pierścieniowy bufor śladów z limitem z budżetu (G9). Test: intensywność monotoniczna, bufor nie
-  przekracza limitu.
+- [x] **H3. Ślady opon na poślizgu.** Core: `SkidMarkModel` (intensywność z poziomu pisku, zanik) i `SkidMarks`
+  (bufor o stałej pojemności, odstęp 0,5 m, koła niezależne), testy w SkidMarksTests. Game: `SkidMarkRenderer`
+  rysuje ślady w zasięgu 150 m jedną siatką. Odstępstwo: limit to stała 400 śladów, a nie wartość z budżetu G9,
+  bo dodanie pola do serializowanej struktury zmieniłoby domyślne wartości istniejących assetów.
 - [ ] **H4. Refleksy mokrego asfaltu.** Core: `WetReflection.Strength(wetness, sunElevation, night01)`, zero na
   suchym asfalcie, najmocniejsze przy niskim słońcu i mokrej nawierzchni. Game: parametr shadera drogi.
   Test: zero na suchym, zakres 0–1, monotoniczność z mokrością.
@@ -102,6 +103,16 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 19, cykl godzinny) — H3 zrobione, z odstępstwem od budżetu. Core: `SkidMarkModel`
+  (intensywność rośnie od poziomu pisku 0,2 do 0,8, zanik liniowy w czasie życia 6 s) i `SkidMarks` (bufor o stałej
+  pojemności; co 0,5 m na każde koło, które piszczy; pierwszy ślad poślizgu od razu; najstarsze znikają przy pełnym
+  buforze). Game: `SkidMarkRenderer` buduje jedną siatkę ciemnych czworokątów dla śladów w zasięgu 150 m, przebudowuje
+  ją co 0,1 s i nie próbkuje drogi dalej, bo to cofałoby generator. Odstępstwo: limit 400 śladów jest stałą, a nie
+  wartością z budżetu G9, bo nowe pole w serializowanej strukturze dałoby zero w istniejących assetach. Testy: CoreTests
+  225/225 (10 nowych w SkidMarksTests). UnityCheck bez błędów. Test rozstawu używa kroku 1/600 s, bo przy 1/60 s
+  odstępy zaokrąglają się do klatek. Blokady: brak Unity Editora i urządzenia; ślady nieobejrzane. Następny: H4
+  (refleksy mokrego asfaltu).
 
 - 2026-11-09 (uruchomienie 18, cykl godzinny) — H2 zrobione. Core: `WindscreenWetness` (dW/dt = A·deszcz −
   (A·deszcz + C(prędkość))·W, rozwiązane dokładnie, więc krok nie przekracza stanu ustalonego i zostaje w 0–1;

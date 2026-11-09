@@ -186,7 +186,8 @@ namespace Race1.Game
             main.gravityModifier = new ParticleSystem.MinMaxCurve(0f);
         }
 
-        private static Material CreateParticleMaterial(float alpha)
+        /// <summary>A transparent unlit material for particles and flat marks. The mesh's vertex colours set the colour.</summary>
+        internal static Material CreateParticleMaterial(float alpha)
         {
             Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
             if (shader == null)

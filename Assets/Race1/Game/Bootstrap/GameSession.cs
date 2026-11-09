@@ -83,6 +83,7 @@ namespace Race1.Game
         private double _snowCover;
         private WindscreenOverlay _windscreen;
         private double _wetness;
+        private SkidMarkRenderer _skidMarks;
         private TrafficView _trafficView;
         private TrafficSimulation _traffic;
         private VehicleDynamics _player;
@@ -316,6 +317,8 @@ namespace Race1.Game
             ambientGo.transform.SetParent(_worldRoot, false);
             _ambient = ambientGo.AddComponent<AmbientAudio>();
             _windscreen = new WindscreenOverlay(_config.Seed);
+            Material skidMaterial = WeatherVisuals.CreateParticleMaterial(1f);
+            if (skidMaterial != null) _skidMarks = new SkidMarkRenderer(_worldRoot, skidMaterial);
         }
 
         // ----- States -----
@@ -413,6 +416,7 @@ namespace Race1.Game
                 Enabled = opts.TrafficOn && mode != GameMode.TimeAttack && !isRace,
             };
             _trafficView.Clear();
+            if (_skidMarks != null) _skidMarks.Clear();
             _scorer = new TrafficChallengeScorer();
             _timer = new TimeAttackTimer();
             if (mode == GameMode.TimeAttack)
@@ -587,6 +591,9 @@ namespace Race1.Game
             // Windscreen: rain wets the glass, speed and the wipers clear it. Drops show from the cockpit view only.
             _wetness = WindscreenWetness.Step(_wetness, _weather.Rain, tm.SpeedMs, dt);
             _windscreen.SetWetness(_camera.Mode == CameraMode.Cockpit ? _wetness : 0.0);
+
+            // Tyre marks: squealing tyres leave dark marks on the road behind the car.
+            if (_skidMarks != null) _skidMarks.Tick(dt, _road, s, _player.T, tm, _spec, _origin);
 
             // Camera effects: shake, roll and FOV kick from the car's motion.
             CameraEffectsOutput fx = _cameraEffects.Step(new CameraEffectsInput

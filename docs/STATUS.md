@@ -10,7 +10,7 @@ skompilowane, ale nieobejrzane ani nieusłyszane** w Unity. Nie ma w tym środow
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **215/215 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **225/225 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -69,7 +69,8 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
 | HUD (prędkość, bieg, asysty, linia wyścigu, odliczanie) | `HudController` | napisane, nieobejrzane | czytelność na Foldzie w obu stanach |
 | Menu, garaż, panel TUNING, pauza | `MenuController` | napisane, nieobejrzane | układ w poziomie, przeciąganie suwaków |
 | Sterowanie dotykowe | `OnScreenControls`, `PlayerInputReader` | napisane, nieobejrzane | pady, przyciski, martwa strefa |
-| Ślady opon, dym, iskry, pył, rozpryski | — | **brak** | — |
+| Ślady opon na poślizgu | `SkidMarks`, `SkidMarkModel` (Core), `SkidMarkRenderer` (Game) | napisane, nieobejrzane: ślad od poziomu pisku 0,2, co 0,5 m, bufor 400, zanik po 6 s | czy ślady są widoczne na asfalcie, czy nie migoczą |
+| Dym, iskry, pył, rozpryski | — | **brak** | — |
 | Krople na szybie w widoku z kokpitu | `WindscreenWetness`, `WindscreenDroplets` (Core), `WindscreenOverlay` (Game) | napisane, nieobejrzane: wilgotność rośnie w deszczu, maleje z prędkością | czytelność kropli, czy nie zasłaniają widoku |
 | Uszkodzenia wizualne (wgniecenia) | — | **brak**, uszkodzenie to liczba w HUD | — |
 | Dźwięk: silnik, wiatr, pisk opon, deszcz | `EngineSynth`, `AmbientSynth`, `AmbientAudio` | napisane, **nieusłyszane** | poziomy, barwa, czy pisk nie jest zbyt ostry |
@@ -96,6 +97,8 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
   testy w SnowCoverTests.
 - Wilgotność szyby (`WindscreenWetness`): deszcz dodaje wody, prędkość i wycieraczki ją usuwają; dokładne
   rozwiązanie równania, bez przeregulowań. Układ kropli (`WindscreenDroplets`) z ziarna. Testy w WindscreenTests.
+- Ślady opon (`SkidMarks`, `SkidMarkModel`): ślad zostawia koło, które piszczy, co 0,5 m; bufor o stałej
+  pojemności, zanik po czasie życia, koła niezależne. Testy w SkidMarksTests.
 - Kamera fotograficzna (`PhotoOrbit`): orbita, zoom, ogniskowa i FOV z 24 mm sensora, nazwy zrzutów
   (`PhotoShots`); testy w PhotoOrbitTests.
 - Ruch AI: unik na wielopasmowych drogach, bezpieczna luka przy zmianie pasa, testy scenariuszy z hamującym graczem (`TrafficEvasionTests`). Ograniczenie: na dwupasmowej drodze auto nie ma gdzie uciec, więc gracz jadący bez hamowania w wolniejsze auto uderzy.
@@ -137,6 +140,8 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
   Nie sprawdzono w Unity.
 - Krople na szybie w widoku z kokpitu (`WindscreenOverlay`): tekstura z układu z Core, przezroczystość według
   wilgotności, ukryta poza kokpitem i w pauzie. Nie sprawdzono w Unity.
+- Ślady opon na asfalcie (`SkidMarkRenderer`): jedna siatka ciemnych czworokątów dla śladów w zasięgu 150 m,
+  przebudowywana co 0,1 s, z materiałem `Particles/Unlit`. Nie sprawdzono w Unity.
 - Woda przybrzeżna: siatka per chunk poza krawędzią drogi (`CoastWaterBuilder`), tylko tam, gdzie biom Coast
   dominuje i teren leży poniżej 0 m. Shader `Race1/Water` (Fresnel, piana z koloru wierzchołków). Gdy shadera
   nie ma w buildzie, używany jest nieprzezroczysty materiał zapasowy. Nie sprawdzono w Unity.
@@ -180,7 +185,7 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
   kodu. Shader `Race1/Water` nie był kompilowany ani oglądany. Nie sprawdzono, czy woda nie zalewa pobocza,
   gdy droga biegnie poniżej 0 m.
 - **Efekty pogodowe są ograniczone.** Cząsteczki deszczu i śniegu istnieją (`WeatherVisuals`), ale nie
-  ma rozprysków ani śladów opon. Kropli na szybie jest w kokpicie, ale nie były oglądane. Pogoda wpływa też na przyczepność, mgłę, kolor nieba
+  ma rozprysków ani dymu. Kropli na szybie i śladów opon jest w kodzie, ale nie były oglądane. Pogoda wpływa też na przyczepność, mgłę, kolor nieba
   i nasycenie nawierzchni.
 - **Śnieg na terenie jest tylko kolorem.** Pokrycie narasta w ciągu ok. 25 s i topnieje w ok. 50 s
   (`SnowCover`), a kolor terenu miesza się z bielą. Tekstura `TerrainMaterialFactory.Snow` nie jest używana:
@@ -258,7 +263,7 @@ To są braki odłożone celowo. Każdy ma powód i warunek, który by go zamkną
 | Brak | Dlaczego zostawiony | Co by go zamknęło |
 |---|---|---|
 | Licencjonowane lub autorskie modele aut, wnętrze, PBR | Nie ma zasobów w repozytorium ani licencji; wymagania zakazują kopiowania cudzych zasobów | Autorskie modele od artysty albo zakupiony zasób z licencją |
-| Ślady opon, dym, iskry, pył, rozpryski | Efekty cząsteczkowe kosztują klatkę na telefonie, a wydajności nie zmierzono | Pomiar w profilerze na urządzeniu, potem ostrożne efekty w ramach budżetu z G9 |
+| Dym, iskry, pył, rozpryski | Efekty cząsteczkowe kosztują klatkę na telefonie, a wydajności nie zmierzono | Pomiar w profilerze na urządzeniu, potem ostrożne efekty w ramach budżetu z G9 |
 | Refleksy mokrego asfaltu (SSR albo planar) | Koszt renderingu, którego nie da się sprawdzić bez urządzenia | Planarne odbicie na jednym odcinku albo tańszy odblask w shaderze drogi |
 | Tekstura śniegu na terenie | Kolor terenu już miesza się z bielą; tekstura wymagałaby mieszania w shaderze | Blend tekstur w shaderze terenu, po przeglądzie wyglądu na urządzeniu |
 | Częstość wybrzeża w świecie (woda jest rzadka) | To decyzja o świecie, nie o kodzie; zmiana wpływa na całą generację | Decyzja właściciela projektu: więcej biomu Coast albo osobne odcinki nadmorskie |
