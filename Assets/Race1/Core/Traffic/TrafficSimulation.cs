@@ -46,6 +46,8 @@ namespace Race1.Core
         private const double SpawnAheadMax = 600.0;
         private const double RecycleBehind = 350.0;
         private const double LaneChangeGap = 18.0;
+        private const double EvadeDistance = 80.0;   // a faster player this close behind makes the car look for a clear lane
+        private const double EvadeTimeToContact = 8.0;
 
         private readonly IRoadProvider _road;
         private readonly List<TrafficCar> _cars = new List<TrafficCar>();
@@ -80,6 +82,42 @@ namespace Race1.Core
             }
         }
 
+        /// <summary>
+        /// Places a car at a fixed spot. Used by scripted scenarios and tests; random spawning is unaffected.
+        /// The lane is the one whose centre is closest to <paramref name="t"/>.
+        /// </summary>
+        public TrafficCar AddCar(double s, double t, int direction, double speed, double desiredSpeed)
+        {
+            RoadSample road = _road.Sample(s);
+            int perSide = Math.Max(1, road.Lanes / 2);
+            int lane = 0;
+            double best = double.PositiveInfinity;
+            for (int k = 0; k < perSide; k++)
+            {
+                double dist = Math.Abs(LaneCentre(direction, k, perSide, road.HalfWidth) - t);
+                if (dist < best)
+                {
+                    best = dist;
+                    lane = k;
+                }
+            }
+            double centre = LaneCentre(direction, lane, perSide, road.HalfWidth);
+            var car = new TrafficCar
+            {
+                Id = _nextId++,
+                S = s,
+                T = centre,
+                TargetT = centre,
+                Speed = speed,
+                Direction = direction,
+                LaneIndex = lane,
+                DesiredSpeed = desiredSpeed,
+                Idm = IdmParameters.Default(desiredSpeed),
+            };
+            _cars.Add(car);
+            return car;
+        }
+
         public void Update(double dt, double playerS, double playerT, double playerSpeed, double playerLength = 4.4)
         {
             _events.Clear();
@@ -107,7 +145,11 @@ namespace Race1.Core
                 car.T += (car.TargetT - car.T) * Math.Min(1.0, dt * 1.5);
 
                 car.LaneChangeCooldown = Math.Max(0.0, car.LaneChangeCooldown - dt);
-                if (car.LaneChangeCooldown <= 0.0 && hasLeader && gap < LaneChangeGap && car.Speed > leaderSpeed + 2.0)
+                if (car.LaneChangeCooldown <= 0.0 && ShouldEvade(car, playerS, playerT, playerSpeed))
+                {
+                    TryLaneChange(car, playerS, playerT, playerSpeed, playerLength);
+                }
+                else if (car.LaneChangeCooldown <= 0.0 && hasLeader && gap < LaneChangeGap && car.Speed > leaderSpeed + 2.0)
                 {
                     TryLaneChange(car, playerS, playerT, playerSpeed, playerLength);
                 }
@@ -180,7 +222,9 @@ namespace Race1.Core
             foreach (TrafficCar other in _cars)
             {
                 if (other == car || other.Direction != car.Direction) continue;
-                if (Math.Abs(other.T - car.T) > TrafficCar.Width) continue;
+                bool sameLane = Math.Abs(other.T - car.T) <= TrafficCar.Width;
+                bool mergingIn = Math.Abs(other.TargetT - car.T) <= TrafficCar.Width;
+                if (!sameLane && !mergingIn) continue;
                 double ahead = (other.S - car.S) * car.Direction;
                 if (ahead <= 0.0 || ahead >= bestDist) continue;
                 bestDist = ahead;
@@ -221,21 +265,52 @@ namespace Race1.Core
             }
         }
 
+        /// <summary>
+        /// A same-direction car in the player's lane, just ahead of a faster player, moves aside when the closing
+        /// time is short. Oncoming cars never evade, because the player is on the other side of the road.
+        /// </summary>
+        private static bool ShouldEvade(TrafficCar car, double playerS, double playerT, double playerSpeed)
+        {
+            if (car.Direction <= 0) return false;
+            if (Math.Abs(car.T - playerT) >= TrafficCar.Width) return false;
+            double ahead = car.S - playerS;
+            if (ahead <= 0.0 || ahead > EvadeDistance) return false;
+            double closing = playerSpeed - car.Speed;
+            if (closing <= 1.0) return false;
+            return ahead / closing < EvadeTimeToContact;
+        }
+
+        /// <summary>
+        /// A lane is free when every car in it keeps a safe gap in both directions. The gap grows with the speed
+        /// difference, so a car cannot slip in just in front of a faster car or just behind it.
+        /// </summary>
         private bool IsLaneFree(TrafficCar car, double targetT, double playerS, double playerT, double playerLength, double playerSpeed)
         {
             foreach (TrafficCar other in _cars)
             {
                 if (other == car || other.Direction != car.Direction) continue;
                 if (Math.Abs(other.T - targetT) > TrafficCar.Width) continue;
-                double dist = (other.S - car.S) * car.Direction;
-                if (dist > -LaneChangeGap && dist < LaneChangeGap * 1.5) return false;
+                if (!IsGapSafe(car.S, car.Speed, other.S, other.Speed, car.Direction)) return false;
             }
             if (car.Direction > 0 && Math.Abs(playerT - targetT) < TrafficCar.Width)
             {
-                double dist = playerS - car.S;
-                if (dist > -LaneChangeGap && dist < LaneChangeGap * 1.5) return false;
+                if (!IsGapSafe(car.S, car.Speed, playerS, playerSpeed, car.Direction)) return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// Safe gap between a car and another car in the same lane. Ahead, the car may not close faster than two
+        /// seconds of the speed difference; behind, the other car may not be closing faster than that.
+        /// </summary>
+        private static bool IsGapSafe(double carS, double carSpeed, double otherS, double otherSpeed, int direction)
+        {
+            double dist = (otherS - carS) * direction;
+            if (dist >= 0.0)
+            {
+                return dist > LaneChangeGap + Math.Max(0.0, carSpeed - otherSpeed) * 2.0;
+            }
+            return -dist > LaneChangeGap + Math.Max(0.0, otherSpeed - carSpeed) * 2.0;
         }
 
         private void DetectPlayerInteractions(double playerS, double playerT, double playerLength)
