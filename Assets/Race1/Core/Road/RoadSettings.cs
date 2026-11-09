@@ -18,7 +18,11 @@ namespace Race1.Core
 
         public double Shoulder = 1.5;               // m
         public double LaneWidth = 3.5;              // m
-        public double BridgeHeight = 9.0;           // road this far above ground is flagged as a bridge
+        public double BridgeHeight = 10.0;          // road this far above ground starts a bridge
+        public double BridgeExitHeight = 5.0;       // a bridge ends once the road drops below this above ground
+        public double TunnelHeight = 15.0;          // ground this far above the road starts a tunnel
+        public double TunnelExitHeight = 8.0;       // a tunnel ends once the ground drops below this (hysteresis)
+        public double StructureMinLength = 60.0;    // a bridge or tunnel condition must hold this long to switch on or off
         public double Clearance = 1.5;              // road sits this far above natural ground when it can
 
         public double AltitudeFloor = -60.0;        // m

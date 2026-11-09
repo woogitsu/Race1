@@ -20,6 +20,7 @@ namespace Race1.Core
         public int Lanes;           // total lanes (both directions)
         public BiomeKind Biome;     // dominant biome at this point
         public bool Bridge;         // road is elevated above natural ground
+        public bool Tunnel;         // road runs under a hill: natural ground is well above the road
 
         /// <summary>Direction of travel.</summary>
         public Vector3d Forward => new Vector3d(
@@ -69,6 +70,7 @@ namespace Race1.Core
                 Lanes = f < 0.5 ? a.Lanes : b.Lanes,
                 Biome = f < 0.5 ? a.Biome : b.Biome,
                 Bridge = f < 0.5 ? a.Bridge : b.Bridge,
+                Tunnel = f < 0.5 ? a.Tunnel : b.Tunnel,
             };
         }
     }

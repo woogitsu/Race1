@@ -21,6 +21,10 @@ namespace Race1.Core
         public double WidthEnd;        // half width at KnotEnd
         public int Lanes;              // lanes of the current knot
         public long KnotNumber;        // knots created so far (also seeds the knot RNG)
+        public bool InTunnel;          // tunnel flag state (switches only after a sustained condition)
+        public int TunnelCount;        // consecutive samples that support the next tunnel switch
+        public bool OnBridge;          // bridge flag state (switches only after a sustained condition)
+        public int BridgeCount;        // consecutive samples that support the next bridge switch
     }
 
     /// <summary>
@@ -88,6 +92,15 @@ namespace Race1.Core
             Biomes.Blend(_weights, out BiomeKind dominant);
             double ground = _terrain.NaturalHeight(st.Position.X, st.Position.Z);
 
+            // Bridges and tunnels are structures, not single metres. Each switches on only after its condition has held
+            // for StructureMinLength, and enter and exit use different heights, so flags never flicker along a ridge.
+            double groundAboveRoad = ground - st.Position.Y;
+            int minSamples = Math.Max(1, (int)Math.Round(_settings.StructureMinLength / _settings.SampleSpacing));
+            st.TunnelCount = Sustain(st.InTunnel ? groundAboveRoad < _settings.TunnelExitHeight : groundAboveRoad > _settings.TunnelHeight,
+                st.TunnelCount, minSamples, ref st.InTunnel);
+            st.BridgeCount = Sustain(st.OnBridge ? -groundAboveRoad < _settings.BridgeExitHeight : -groundAboveRoad > _settings.BridgeHeight,
+                st.BridgeCount, minSamples, ref st.OnBridge);
+
             var sample = new RoadSample
             {
                 S = st.Index * ds,
@@ -100,7 +113,8 @@ namespace Race1.Core
                 Shoulder = _settings.Shoulder,
                 Lanes = st.Lanes,
                 Biome = dominant,
-                Bridge = st.Position.Y - ground > _settings.BridgeHeight,
+                Bridge = st.OnBridge,
+                Tunnel = st.InTunnel,
             };
 
             // Advance to the next sample with a midpoint rule: exact for the linear curvature ramps.
@@ -125,6 +139,22 @@ namespace Race1.Core
         {
             double len = st.KnotEnd - st.KnotStart;
             return len <= 0 ? 0.0 : (index - st.KnotStart) / len;
+        }
+
+        /// <summary>
+        /// Counts consecutive samples that support a switch. Returns the new count; flips <paramref name="state"/>
+        /// once the count reaches <paramref name="minSamples"/>. When the state is already on, the condition is the
+        /// exit condition, so a flag cannot be switched off and on again within a few metres.
+        /// </summary>
+        private static int Sustain(bool supportsSwitch, int count, int minSamples, ref bool state)
+        {
+            count = supportsSwitch ? count + 1 : 0;
+            if (count >= minSamples)
+            {
+                state = !state;
+                return 0;
+            }
+            return count;
         }
 
         private double ComputeBank(double kappa)

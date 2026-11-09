@@ -46,6 +46,7 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
   asysta kierownicy, aero, opór toczenia, bariera z kolizją.
 - Trzy samochody o różnym charakterze (`VehicleCatalog`), oryginalne nazwy.
 - Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), testy w CoreTests.
+- Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Renderowanie tuneli i filarów mostów jeszcze nie istnieje. Udział jest wysoki w alpejskim terenie i wymaga strojenia.
 - Ruch AI: unik na wielopasmowych drogach, bezpieczna luka przy zmianie pasa, testy scenariuszy z hamującym graczem (`TrafficEvasionTests`). Ograniczenie: na dwupasmowej drodze auto nie ma gdzie uciec, więc gracz jadący bez hamowania w wolniejsze auto uderzy.
 - Harmonogram pogody i pory dnia (`WeatherSchedule`): deterministyczne przejścia pogody i godzina doby; testy płynności, testy w CoreTests. Jeszcze nie podpięty do GameSession.
 - Strojenie aut w garażu (`VehicleTuning`): sprężyny, tłumienie, przełożenie, hamulce i mieszanka opon z limitami zakresów; testy w CoreTests.
