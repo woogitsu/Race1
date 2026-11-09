@@ -36,6 +36,9 @@ namespace Race1.Game
 
         private const int MaxPerDraw = 1023;
 
+        /// <summary>Lamp keys are chunk index times this stride plus the slot, so keys stay unique for any chunk.</summary>
+        public const long LampKeyStride = 4096;
+
         private readonly RoadTrack _road;
         private readonly TerrainField _terrain;
         private readonly BiomeField _biomes;
@@ -149,6 +152,37 @@ namespace Race1.Game
         {
             foreach (Chunk c in _active.Values) Recycle(c);
             _active.Clear();
+        }
+
+        /// <summary>
+        /// Collects the world positions of every street lamp in the active chunks, relative to the floating origin,
+        /// and a stable key per lamp (chunk index and slot) that survives between frames. The buffers are grown
+        /// when needed and reused otherwise. Returns the number of valid entries.
+        /// </summary>
+        public int CollectLamps(Vector3d origin, ref Vector3d[] positions, ref long[] keys)
+        {
+            int total = 0;
+            foreach (Chunk chunk in _active.Values) total += chunk.LampCount;
+            if (positions == null || positions.Length < total)
+            {
+                positions = new Vector3d[total * 2];
+                keys = new long[total * 2];
+            }
+
+            int n = 0;
+            foreach (Chunk chunk in _active.Values)
+            {
+                if (!chunk.Go.activeInHierarchy) continue;
+                Vector3d chunkOffset = chunk.Origin - origin;
+                for (int j = 0; j < chunk.LampCount; j++)
+                {
+                    Vector4 column = chunk.Lamps[j].GetColumn(3);
+                    positions[n] = chunkOffset + new Vector3d(column.x, column.y, column.z);
+                    keys[n] = chunk.Index * LampKeyStride + j;
+                    n++;
+                }
+            }
+            return n;
         }
 
         private void Build(long k, Vector3d origin)

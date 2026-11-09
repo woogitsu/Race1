@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **120/120 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **126/126 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -52,6 +52,7 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Trzy samochody o różnym charakterze (`VehicleCatalog`), oryginalne nazwy.
 - Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), testy w CoreTests.
 - Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Renderowanie tuneli i filarów mostów jeszcze nie istnieje. Udział jest wysoki w alpejskim terenie i wymaga strojenia.
+- Latarnie nocą: wybór najbliższych N latarni z histerezą (`LampBudget`), testy w LampBudgetTests.
 - Ruch AI: unik na wielopasmowych drogach, bezpieczna luka przy zmianie pasa, testy scenariuszy z hamującym graczem (`TrafficEvasionTests`). Ograniczenie: na dwupasmowej drodze auto nie ma gdzie uciec, więc gracz jadący bez hamowania w wolniejsze auto uderzy.
 - Harmonogram pogody i pory dnia (`WeatherSchedule`): deterministyczne przejścia pogody i godzina doby; testy płynności, testy w CoreTests. Jeszcze nie podpięty do GameSession.
 - Strojenie aut w garażu (`VehicleTuning`): sprężyny, tłumienie, przełożenie, hamulce i mieszanka opon z limitami zakresów; testy w CoreTests.
@@ -77,6 +78,9 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Menu: start, pauza, garaż z obracającym się autem, wybór trybu/auta/lakieru/pogody/pory dnia/asyst.
 - Platforma: odczyt safe area, odświeżania, baterii; termika Androida przez JNI (tylko na Androidzie).
 - Wydajność: skala renderowania URP, liczba chunków, MSAA, docelowy FPS według poziomu.
+- Latarnie: głowy instancjonowane (świecą nocą) i pula do N prawdziwych świateł punktowych
+  (`StreetLampLights`, limit `RaceConfig.MaxLitStreetLamps`, domyślnie 8) przydzielanych najbliższym
+  latarniom przez `LampBudget`. Nie sprawdzono w Unity, ile to kosztuje na telefonie.
 - Narzędzia edytora: konfiguracja projektu (IL2CPP, ARM64, Vulkan, orientacja pozioma, liniowa
   przestrzeń barw, minSdk 30), utworzenie sceny i `RaceConfig`, budowa APK (również `-batchmode`).
 
@@ -88,8 +92,8 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 ### Grafika i świat
 - **Modele samochodów nie są szczegółowe.** Karoseria to proceduralna superellipsa; nie ma wnętrza,
   LOD, PBR z teksturami ani licencjonowanych modeli. Wymagania mówią wprost, że to nie może być wersja docelowa.
-- **Brak budynków, znaków, lamp, barierek ze zdobieniami.** Świat ma teren, drogę, oznakowanie,
-  drzewa i skały.
+- **Brak budynków, znaków i barierek ze zdobieniami.** Świat ma teren, drogę, oznakowanie,
+  drzewa, skały i latarnie. Latarnie nie zostały obejrzane w Unity, więc ich wygląd nocą jest nieznany.
 - **Tunele nie są renderowane jako tuby.** Flaga `Bridge` jest liczona, ale nie ma pilonów mostu.
   Głęboki wykop jest zwykłą ścianą skalną.
 - **Brak wody** (morze/jezioro) mimo biomu wybrzeża.

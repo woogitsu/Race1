@@ -55,8 +55,9 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 
 ### Gra i grafika (weryfikowane przez UnityCheck)
 
-- [ ] **G1. Latarnie z prawdziwym światłem.** Dla najbliższych N latarni (limit 8) włączyć `Light`
-  w nocy, reszta emisyjna. Limit w `RaceConfig`.
+- [x] **G1. Latarnie z prawdziwym światłem.** Dla najbliższych N latarni (limit 8) włączyć `Light`
+  w nocy, reszta emisyjna. Limit w `RaceConfig` (`MaxLitStreetLamps`). Wybór w Core (`LampBudget`,
+  z histerezą, testy), pula świateł w Game (`StreetLampLights`).
 - [ ] **G2. Tryb wyścigu AI w menu i w sesji.** Podpięcie `RaceDirector` z C2 do `GameSession` i menu.
 - [ ] **G3. Tryb fotograficzny.** Pauza > „Photo”: swobodna kamera orbitalna, zmiana FOV i ogniskowej,
   zapis zrzutu (`ScreenCapture`) do `persistentDataPath`.
@@ -76,6 +77,17 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 7, cykl godzinny) — G1 zrobione. `LampBudget` (Core/World): wybiera najbliższe N
+  latarni; lampa już zapalona zostaje, dopóki niezapalona nie jest o 15% bliżej (histerezja), więc światła nie
+  migoczą. Wybór deterministyczny, bez alokacji w klatce. `StreetLampLights` (Game/Road): pula N świateł
+  reflektorowych pod światem, przydział stabilny (światło trzyma latarnię, dopóki ona świeci), wyłączona w dzień.
+  Limit `RaceConfig.MaxLitStreetLamps` = 8. W każdej klatce najpierw zwalniane są światła gasnących latarni, potem
+  przydzielane nowe. Ten porządek poprawiłem przy przeglądzie kodu, zanim cokolwiek uruchomiłem. Testy: CoreTests
+  126/126 (6 nowych w LampBudgetTests; przebieg wzdłuż rzędu 60 latarni: najwyżej 2 przełączenia na latarnię,
+  zawsze dokładnie 8 zapalonych). UnityCheck bez błędów. Nie sprawdzono w Unity: wyglądu nocą, kosztu ośmiu świateł
+  na Androidzie i współdziałania z limitem świateł URP oraz z `CarLights`. Następny: G2 (tryb wyścigu AI w menu i
+  sesji).
 
 - 2026-11-09 (uruchomienie 6, cykl godzinny) — C6 zrobione. `TyreCondition` (czyste funkcje): zużycie
   rośnie proporcjonalnie do mocy poślizgu i nigdy nie maleje; grip zużycia spada monotonicznie do 0.78

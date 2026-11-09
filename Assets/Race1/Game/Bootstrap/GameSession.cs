@@ -54,6 +54,7 @@ namespace Race1.Game
         private TerrainField _terrain;
         private RoadTrack _road;
         private RoadChunkStreamer _chunks;
+        private StreetLampLights _lampLights;
         private VegetationStreamer _vegetation;
         private RoadMaterialSet _roadMats;
         private TerrainMaterialSet _terrainMats;
@@ -242,6 +243,7 @@ namespace Race1.Game
             _chunks = new RoadChunkStreamer(_road, _terrain, _biomes, _worldRoot, _roadMats, _terrainMats,
                 _railMat, _postMat, _lampMat, _vegetation, seed);
             _chunks.BuildsPerFrame = _config.BuildsPerFrame;
+            _lampLights = new StreetLampLights(_worldRoot, _config.MaxLitStreetLamps);
         }
 
         private void CreateViews()
@@ -340,6 +342,7 @@ namespace Race1.Game
             RoadSample start = _road.Sample(startS);
             _origin = start.PointAt(startT);
             _chunks.Clear();
+            _lampLights.Clear();
             // Pre-fill the road around the start so the first frames are not a blank strip.
             for (int i = 0; i < 6; i++) _chunks.Update(startS, _origin);
             _playerView.Place(start, startT, 0.0, _origin, _player.Telemetry, 0f);
@@ -465,6 +468,7 @@ namespace Race1.Game
             // Road and world.
             _chunks.Update(s, _origin);
             _chunks.DrawRoadside(_origin);
+            _lampLights.Update(_chunks, _origin, _playerView.WorldPosition - _origin, _night01);
             _vegetation.Draw(_chunks.Active, _origin);
             _playerView.Place(_road.Sample(s), _player.T, _player.HeadingError, _origin, tm, dt);
             _playerView.SetNight(_night01);

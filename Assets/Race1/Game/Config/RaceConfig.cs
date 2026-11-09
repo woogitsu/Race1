@@ -23,6 +23,10 @@ namespace Race1.Game
         [Header("Traffic")]
         public int MaxTrafficCars = 14;
 
+        [Header("Lighting")]
+        [Tooltip("Street lamps that get a real light source at night. The rest only glow.")]
+        public int MaxLitStreetLamps = 8;
+
         [Header("Vehicle")]
         public float PhysicsStepHint = 1f / 600f;
 
