@@ -105,6 +105,15 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
 
+- 2026-11-09 (uruchomienie 21, cykl godzinny) — kolejka pusta. Nie ma nieukończonego punktu: G1–G10 i H1–H4 są
+  zrobione. Nie dopisano nowego zakresu, bo wybór kolejnych punktów należy do właściciela projektu. Weryfikacja:
+  CoreTests 232/232, UnityCheck bez błędów, drzewo czyste. Propozycje do decyzji: (1) prawdziwe odbicia planarne
+  na jednym odcinku, po pomiarze kosztu; (2) kalibracja stałych na urządzeniu (opony, poziomy dźwięku, progi LOD,
+  limity budżetu, siła śladów i kropli); (3) decyzja o częstości wybrzeża w świecie, bo woda jest rzadka; (4)
+  przegląd w Unity wszystkich pozycji „nieobejrzane” z listy wizualnej w `docs/STATUS.md`. Blokady: brak Unity
+  Editora i urządzenia; licencja Unity po stronie użytkownika.
+
+
 - 2026-11-09 (uruchomienie 20, cykl godzinny) — H4 zrobione, z odstępstwem. Core: `WetReflection` (film od mokrości
   0,1 do 0,6, odbicie słabsze przy wysokim słońcu, od 5° do 50° w dół o 60 %, w nocy o 20 % mniej; zero na suchym;
   testy w WetReflectionTests). Game: `RoadMaterialSet.SetReflection` steruje gładkością asfaltu; `GameSession` podaje

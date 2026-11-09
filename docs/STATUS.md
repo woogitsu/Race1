@@ -6,6 +6,8 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 Ostatni przegląd jakości (G10): 2026-11-09. Wszystko, co dotyczy grafiki i dźwięku, jest **napisane i
 skompilowane, ale nieobejrzane ani nieusłyszane** w Unity. Nie ma w tym środowisku renderingu ani Unity Editora.
 
+Stan kolejki w `docs/ROADMAP.md`: G1–G10 i H1–H4 są zrobione. Kolejny zakres wybiera właściciel projektu.
+
 ## Co zostało zweryfikowane i jak
 
 | Obszar | Weryfikacja | Wynik |
