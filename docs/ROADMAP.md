@@ -96,13 +96,23 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
   (bufor o stałej pojemności, odstęp 0,5 m, koła niezależne), testy w SkidMarksTests. Game: `SkidMarkRenderer`
   rysuje ślady w zasięgu 150 m jedną siatką. Odstępstwo: limit to stała 400 śladów, a nie wartość z budżetu G9,
   bo dodanie pola do serializowanej struktury zmieniłoby domyślne wartości istniejących assetów.
-- [ ] **H4. Refleksy mokrego asfaltu.** Core: `WetReflection.Strength(wetness, sunElevation, night01)`, zero na
-  suchym asfalcie, najmocniejsze przy niskim słońcu i mokrej nawierzchni. Game: parametr shadera drogi.
-  Test: zero na suchym, zakres 0–1, monotoniczność z mokrością.
+- [x] **H4. Refleksy mokrego asfaltu.** Core: `WetReflection.Strength(wetness, sunElevation, night01)`, zero na
+  suchym asfalcie, najmocniejsze przy niskim słońcu i mokrej nawierzchni, testy w WetReflectionTests. Game: siła
+  odbicia steruje gładkością asfaltu (`RoadMaterialSet.SetReflection`), zamiast parametru własnego shadera.
+  Odstępstwo: brak własnego shadera drogi; prawdziwe odbicia (SSR/planar) pozostają w braku.
 
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 20, cykl godzinny) — H4 zrobione, z odstępstwem. Core: `WetReflection` (film od mokrości
+  0,1 do 0,6, odbicie słabsze przy wysokim słońcu, od 5° do 50° w dół o 60 %, w nocy o 20 % mniej; zero na suchym;
+  testy w WetReflectionTests). Game: `RoadMaterialSet.SetReflection` steruje gładkością asfaltu; `GameSession` podaje
+  siłę odbicia co sekundę z pogody i wysokości słońca. Zmiana zachowania: `SetWetness` już nie nabłyszcza asfaltu,
+  bo robi to odbicie. Dla suchej drogi wynik jest taki sam. Odstępstwo: nie napisano własnego shadera drogi, więc
+  prawdziwe odbicia (SSR/planar) zostają w braku. Testy: CoreTests 232/232 (7 nowych). UnityCheck bez błędów.
+  Blokady: brak Unity Editora i urządzenia; połysk nieobejrzany. Kolejka H1–H4 jest zrobiona. Następny: decyzja
+  właściciela, czy dopisać kolejne punkty (np. prawdziwe odbicia planarne, kalibrację na urządzeniu).
 
 - 2026-11-09 (uruchomienie 19, cykl godzinny) — H3 zrobione, z odstępstwem od budżetu. Core: `SkidMarkModel`
   (intensywność rośnie od poziomu pisku 0,2 do 0,8, zanik liniowy w czasie życia 6 s) i `SkidMarks` (bufor o stałej

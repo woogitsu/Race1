@@ -888,6 +888,12 @@ namespace Race1.Game
             _night01 = (float)SkyModel.NightFactor(elev);
             _golden01 = (float)SkyModel.GoldenHourFactor(elev);
 
+            // Wet asphalt reflects the sky, the sun and the lamps by this much (see WetReflection).
+            if (_roadMats != null)
+            {
+                _roadMats.SetReflection((float)WetReflection.Strength(_weather.Wetness, elev, _night01));
+            }
+
             _sun.transform.rotation = Quaternion.LookRotation(-towardsSun);
             _sun.intensity = (float)(0.1 + 1.6 * look.SunIntensity);
             _sun.color = ToColor(look.SunTint);

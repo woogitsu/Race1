@@ -22,6 +22,7 @@ namespace Race1.Game
         private const float WetDarkening = 0.35f;
 
         private float _wetness;
+        private float _reflection;
 
         /// <summary>Carriageway asphalt. Darkens and gets glossier when wet.</summary>
         public Material Asphalt;
@@ -42,9 +43,26 @@ namespace Race1.Game
         /// <summary>Current wetness: 0 is dry and 1 is fully wet.</summary>
         public float Wetness => _wetness;
 
+        /// <summary>Current reflection of the wet asphalt: 0 is none and 1 is a glossy film.</summary>
+        public float Reflection => _reflection;
+
         /// <summary>
-        /// Sets how wet the road looks. The value is clamped to 0..1. Asphalt darkens by up to 35 percent
-        /// and gets glossier. Markings get glossier only. Shoulders darken by half the asphalt amount.
+        /// Sets how strongly the asphalt reflects (0..1, clamped). The gloss rises with the reflection, so a dry road stays
+        /// matt and a wet one shows the sky and the lamps. The value comes from the core rule <c>WetReflection</c>.
+        /// </summary>
+        public void SetReflection(float reflection01)
+        {
+            float r = float.IsNaN(reflection01) ? 0f : Mathf.Clamp01(reflection01);
+            _reflection = r;
+            if (Asphalt != null)
+            {
+                RoadMaterialFactory.SetSmoothness(Asphalt, AsphaltDrySmoothness + WetGloss * r);
+            }
+        }
+
+        /// <summary>
+        /// Sets how wet the road looks. The value is clamped to 0..1. Asphalt darkens by up to 35 percent; its gloss
+        /// comes from <see cref="SetReflection"/>. Markings get glossier with wetness. Shoulders darken by half the asphalt amount.
         /// </summary>
         public void SetWetness(float wet01)
         {
@@ -54,7 +72,6 @@ namespace Race1.Game
             if (Asphalt != null)
             {
                 RoadMaterialFactory.SetBaseGrey(Asphalt, 1f - WetDarkening * w);
-                RoadMaterialFactory.SetSmoothness(Asphalt, AsphaltDrySmoothness + WetGloss * w);
             }
             if (Marking != null)
             {

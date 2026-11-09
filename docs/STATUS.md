@@ -10,7 +10,7 @@ skompilowane, ale nieobejrzane ani nieusłyszane** w Unity. Nie ma w tym środow
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **225/225 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **232/232 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -57,7 +57,7 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
 | Niebo, słońce, gwiazdy, chmury, zachód | `Race1/Sky`, `SkyModel`, `Atmosphere`, `GameSession.UpdateSky` | napisane, nieobejrzane | kolor w złotej godzinie, gwiazdy w nocy |
 | Deszcz i śnieg (cząsteczki), mgła | `WeatherVisuals`, `WeatherState` | napisane, nieobejrzane | gęstość cząsteczek, widoczność w mgle |
 | Śnieg na terenie | `SnowCover` (Core), `RoadChunkStreamer.SetSnowCover` | napisane, nieobejrzane: kolor terenu miesza się z bielą, tekstura `TerrainMaterialFactory.Snow` nie jest używana | czy przejście jest płynne, czy biel nie wygląda płasko |
-| Mokra nawierzchnia | `RoadMaterialFactory.SetWetness` | napisane, nieobejrzane | ciemniejszy asfalt, bez refleksów |
+| Mokra nawierzchnia i odbicia | `RoadMaterialFactory.SetWetness`, `SetReflection`, `WetReflection` (Core) | napisane, nieobejrzane: asfalt ciemnieje z mokrością, połysk rośnie z odbiciem (niskie słońce, mniej w nocy) | czy połysk wygląda jak woda, a nie jak lakier; prawdziwych odbić nie ma |
 | Post-processing (bloom, tonemapping, winieta, ziarno) | `PostProcessingController` | napisane, nieobejrzane | czy nie przepala się noc i nie ciemnieje dzień |
 | Odbicia otoczenia | `ReflectionProbeRig` | napisane, nieobejrzane | czy sonda nie zostawia artefaktów na karoserii |
 | Samochód: karoseria, szkło, koła, paint | `CarMeshFactory`, `CarView`, `CarPaint` | napisane, nieobejrzane | kształt, szkło, błysk lakieru |
@@ -97,6 +97,8 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
   testy w SnowCoverTests.
 - Wilgotność szyby (`WindscreenWetness`): deszcz dodaje wody, prędkość i wycieraczki ją usuwają; dokładne
   rozwiązanie równania, bez przeregulowań. Układ kropli (`WindscreenDroplets`) z ziarna. Testy w WindscreenTests.
+- Odbicie mokrego asfaltu (`WetReflection`): film od pewnej mokrości, silniejszy przy niskim słońcu, lekko słabszy
+  w nocy, zero na suchym. Testy w WetReflectionTests.
 - Ślady opon (`SkidMarks`, `SkidMarkModel`): ślad zostawia koło, które piszczy, co 0,5 m; bufor o stałej
   pojemności, zanik po czasie życia, koła niezależne. Testy w SkidMarksTests.
 - Kamera fotograficzna (`PhotoOrbit`): orbita, zoom, ogniskowa i FOV z 24 mm sensora, nazwy zrzutów
@@ -140,6 +142,8 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
   Nie sprawdzono w Unity.
 - Krople na szybie w widoku z kokpitu (`WindscreenOverlay`): tekstura z układu z Core, przezroczystość według
   wilgotności, ukryta poza kokpitem i w pauzie. Nie sprawdzono w Unity.
+- Połysk mokrego asfaltu ze siły odbicia (`RoadMaterialSet.SetReflection`, wywoływane co sekundę z nieba).
+  Nie sprawdzono w Unity.
 - Ślady opon na asfalcie (`SkidMarkRenderer`): jedna siatka ciemnych czworokątów dla śladów w zasięgu 150 m,
   przebudowywana co 0,1 s, z materiałem `Particles/Unlit`. Nie sprawdzono w Unity.
 - Woda przybrzeżna: siatka per chunk poza krawędzią drogi (`CoastWaterBuilder`), tylko tam, gdzie biom Coast
@@ -190,7 +194,9 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - **Śnieg na terenie jest tylko kolorem.** Pokrycie narasta w ciągu ok. 25 s i topnieje w ok. 50 s
   (`SnowCover`), a kolor terenu miesza się z bielą. Tekstura `TerrainMaterialFactory.Snow` nie jest używana:
   pokazanie jej wymagałoby mieszania tekstur w shaderze terenu, a przełączanie materiału dałoby skok.
-- **Brak refleksów mokrego asfaltu** (SSR/planar); mokra nawierzchnia to niższa przyczepność i ciemniejszy kolor.
+- **Refleksy mokrego asfaltu są tylko połyskiem.** Siła odbicia (`WetReflection`) steruje gładkością asfaltu,
+  ale nie ma prawdziwego odbicia (SSR ani planarnego). Odbija to, co łapią sondy odbić. Mokra nawierzchnia to
+  też niższa przyczepność i ciemniejszy kolor.
 - Brak dedykowanego shadera asfaltu z połyskiem; używany jest URP Lit z teksturą proceduralną.
 
 ### Rozgrywka
@@ -264,7 +270,7 @@ To są braki odłożone celowo. Każdy ma powód i warunek, który by go zamkną
 |---|---|---|
 | Licencjonowane lub autorskie modele aut, wnętrze, PBR | Nie ma zasobów w repozytorium ani licencji; wymagania zakazują kopiowania cudzych zasobów | Autorskie modele od artysty albo zakupiony zasób z licencją |
 | Dym, iskry, pył, rozpryski | Efekty cząsteczkowe kosztują klatkę na telefonie, a wydajności nie zmierzono | Pomiar w profilerze na urządzeniu, potem ostrożne efekty w ramach budżetu z G9 |
-| Refleksy mokrego asfaltu (SSR albo planar) | Koszt renderingu, którego nie da się sprawdzić bez urządzenia | Planarne odbicie na jednym odcinku albo tańszy odblask w shaderze drogi |
+| Prawdziwe odbicia w mokrym asfalcie (SSR albo planar) | Połysk już działa; prawdziwe odbicie kosztuje renderingu, którego nie da się sprawdzić bez urządzenia | Planarne odbicie na jednym odcinku po pomiarze kosztu, albo tańszy odblask w shaderze drogi |
 | Tekstura śniegu na terenie | Kolor terenu już miesza się z bielą; tekstura wymagałaby mieszania w shaderze | Blend tekstur w shaderze terenu, po przeglądzie wyglądu na urządzeniu |
 | Częstość wybrzeża w świecie (woda jest rzadka) | To decyzja o świecie, nie o kodzie; zmiana wpływa na całą generację | Decyzja właściciela projektu: więcej biomu Coast albo osobne odcinki nadmorskie |
 | Kalibracja: stałe opon, poziomy dźwięku, progi LOD, limity budżetu | Brak danych z opon i brak pomiaru na urządzeniu | Testy na urządzeniu i pomiary wzorcowe |
