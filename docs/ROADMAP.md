@@ -89,8 +89,9 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
   z ograniczoną szybkością), testy w SnowCoverTests. Game: kolor chunków miesza się z bielą według pokrycia.
   Odstępstwo od planu: tekstura `TerrainMaterialFactory.Snow` nie jest podpinana, bo przełączenie materiału dałoby
   skok na wszystkich chunkach naraz. Mieszanie tekstur w shaderze zostaje jako osobny krok.
-- [ ] **H2. Krople na szybie w deszczu.** Core: `WindscreenWetness`, rośnie z deszczem, maleje z prędkością
-  (wycieraczki), zakres 0–1. Game: nakładka na widok z kokpitu. Test: wzrost z deszczem, spadek z prędkością.
+- [x] **H2. Krople na szybie w deszczu.** Core: `WindscreenWetness` (rośnie z deszczem, maleje z prędkością,
+  dokładne rozwiązanie równania), `WindscreenDroplets` (układ kropli z ziarna), testy w WindscreenTests.
+  Game: `WindscreenOverlay` pokazuje krople w widoku z kokpitu. Nieobejrzane.
 - [ ] **H3. Ślady opon na poślizgu.** Core: `SkidMarkModel.Intensity(squealLevel)` oraz odstęp śladów wzdłuż
   drogi. Game: pierścieniowy bufor śladów z limitem z budżetu (G9). Test: intensywność monotoniczna, bufor nie
   przekracza limitu.
@@ -101,6 +102,15 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 18, cykl godzinny) — H2 zrobione. Core: `WindscreenWetness` (dW/dt = A·deszcz −
+  (A·deszcz + C(prędkość))·W, rozwiązane dokładnie, więc krok nie przekracza stanu ustalonego i zostaje w 0–1;
+  C rośnie z prędkością do pełnego przy 25 m/s, a na postoju tylko powoli paruje) oraz `WindscreenDroplets` (układ
+  kropli z ziarna, większość małych). Game: `WindscreenOverlay` maluje krople raz do tekstury i ustawia
+  przezroczystość według wilgotności; `GameSession` pokazuje je tylko w widoku z kokpitu, a w pauzie, trybie foto
+  i menu je wyłącza. Stub `Image` w `tools/UnityCheck` dostał pole `sprite`, bo to zgodne z prawdziwym API.
+  Testy: CoreTests 215/215 (9 nowych w WindscreenTests). UnityCheck bez błędów. Blokady: brak Unity Editora
+  i urządzenia; krople nieobejrzane. Następny: H3 (ślady opon na poślizgu).
 
 - 2026-11-09 (uruchomienie 17, cykl godzinny) — H1 zrobione, z odstępstwem. Core: `SnowCover` (cel to łagodna rampa
   od 0,15 do 0,6 z ilości śniegu pogodowego; pokrycie narasta z szybkością 0,04/s, czyli pełne w ok. 25 s, i topnieje

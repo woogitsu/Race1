@@ -26,6 +26,7 @@ namespace UnityEngine.UI
         public Type type;
         public FillMethod fillMethod;
         public float fillAmount;
+        public Sprite sprite;
     }
 
     public class Button : MonoBehaviour

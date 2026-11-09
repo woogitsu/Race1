@@ -81,6 +81,8 @@ namespace Race1.Game
         private EngineAudio _engineAudio;
         private AmbientAudio _ambient;
         private double _snowCover;
+        private WindscreenOverlay _windscreen;
+        private double _wetness;
         private TrafficView _trafficView;
         private TrafficSimulation _traffic;
         private VehicleDynamics _player;
@@ -313,6 +315,7 @@ namespace Race1.Game
             var ambientGo = new GameObject("AmbientAudio");
             ambientGo.transform.SetParent(_worldRoot, false);
             _ambient = ambientGo.AddComponent<AmbientAudio>();
+            _windscreen = new WindscreenOverlay(_config.Seed);
         }
 
         // ----- States -----
@@ -320,7 +323,7 @@ namespace Race1.Game
         private void EnterMenu()
         {
             _state = AppState.Menu;
-            SilenceAmbient();
+            QuietDriveEffects();
             _worldRoot.gameObject.SetActive(false);
             _showroomRoot.gameObject.SetActive(true);
             _hud.SetVisible(false);
@@ -445,7 +448,7 @@ namespace Race1.Game
             _state = AppState.Paused;
             _menu.ShowPause();
             _hud.SetVisible(false);
-            SilenceAmbient();
+            QuietDriveEffects();
             SaveNow();
         }
 
@@ -581,6 +584,10 @@ namespace Race1.Game
                 _ambient.Set(AmbientSoundModel.WindLevel(tm.SpeedMs), squeal, AmbientSoundModel.RainLevel(_weather.Rain));
             }
 
+            // Windscreen: rain wets the glass, speed and the wipers clear it. Drops show from the cockpit view only.
+            _wetness = WindscreenWetness.Step(_wetness, _weather.Rain, tm.SpeedMs, dt);
+            _windscreen.SetWetness(_camera.Mode == CameraMode.Cockpit ? _wetness : 0.0);
+
             // Camera effects: shake, roll and FOV kick from the car's motion.
             CameraEffectsOutput fx = _cameraEffects.Step(new CameraEffectsInput
             {
@@ -621,10 +628,11 @@ namespace Race1.Game
             _hud.Tick(dt, BuildHudState(tm));
         }
 
-        /// <summary>The ambient sound stops whenever the car is not being driven: paused, in photo mode, or in the menu.</summary>
-        private void SilenceAmbient()
+        /// <summary>The ambient sound and the windscreen drops stop whenever the car is not being driven: paused, in photo mode, or in the menu.</summary>
+        private void QuietDriveEffects()
         {
             if (_ambient != null) _ambient.Set(0.0, 0.0, 0.0);
+            if (_windscreen != null) _windscreen.SetWetness(0.0);
         }
 
         // ----- Garage tuning -----
@@ -657,7 +665,7 @@ namespace Race1.Game
         {
             _state = AppState.Photo;
             _hud.SetVisible(false);
-            SilenceAmbient();
+            QuietDriveEffects();
             _menu.ShowPhoto();
             UpdatePhotoInfo(null);
         }
