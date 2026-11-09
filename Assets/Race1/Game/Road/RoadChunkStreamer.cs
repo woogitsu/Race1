@@ -35,6 +35,11 @@ namespace Race1.Game
             public GameObject Water;
             public MeshFilter WaterFilter;
             public MeshRenderer WaterRenderer;
+            public Matrix4x4[] Pillars;
+            public int PillarCount;
+            public GameObject Lining;
+            public MeshFilter LiningFilter;
+            public MeshRenderer LiningRenderer;
         }
 
         private const int MaxPerDraw = 1023;
@@ -89,6 +94,9 @@ namespace Race1.Game
 
         /// <summary>Material for the coast sea surface. When null, no water is built.</summary>
         public Material WaterMaterial { get; set; }
+
+        /// <summary>Material for tunnel linings. When null, tunnels are not lined.</summary>
+        public Material TunnelMaterial { get; set; }
 
         public void Update(double carS, Vector3d origin)
         {
@@ -150,6 +158,7 @@ namespace Race1.Game
                 Vector3 offset = ToFloat(chunk.Origin - origin);
                 Matrix4x4 root = Matrix4x4.Translate(offset);
                 DrawBatch(_postMesh, _postMaterial, root, chunk.Posts, chunk.PostCount);
+                DrawBatch(_postMesh, _postMaterial, root, chunk.Pillars, chunk.PillarCount);
                 DrawBatch(_lampMesh, _lampMaterial, root, chunk.Lamps, chunk.LampCount);
             }
         }
@@ -239,6 +248,22 @@ namespace Race1.Game
                 chunk.Water.SetActive(false);
             }
 
+            // Bridge pillars under the deck, and the lining of any tunnel in this chunk.
+            chunk.PillarCount = StructureProps.BuildPillars(_road, _terrain, k, data.Origin, ref chunk.Pillars);
+            Mesh lining = TunnelMaterial != null ? StructureProps.BuildTunnelLining(_road, k, data.Origin) : null;
+            if (lining != null)
+            {
+                if (chunk.Lining == null) CreateLining(chunk);
+                if (chunk.LiningFilter.sharedMesh != null) Object.Destroy(chunk.LiningFilter.sharedMesh);
+                chunk.LiningFilter.sharedMesh = lining;
+                chunk.LiningRenderer.sharedMaterial = TunnelMaterial;
+                chunk.Lining.SetActive(true);
+            }
+            else if (chunk.Lining != null)
+            {
+                chunk.Lining.SetActive(false);
+            }
+
             chunk.Posts = side.Posts;
             chunk.PostCount = side.PostCount;
             if (chunk.Lamps == null || chunk.Lamps.Length < side.LampCount) chunk.Lamps = new Matrix4x4[side.LampCount];
@@ -277,6 +302,17 @@ namespace Race1.Game
             chunk.RailRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
         }
 
+        private static void CreateLining(Chunk chunk)
+        {
+            var lining = new GameObject("TunnelLining");
+            lining.transform.SetParent(chunk.Go.transform, false);
+            chunk.Lining = lining;
+            chunk.LiningFilter = lining.AddComponent<MeshFilter>();
+            chunk.LiningRenderer = lining.AddComponent<MeshRenderer>();
+            chunk.LiningRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            chunk.LiningRenderer.receiveShadows = true;
+        }
+
         private static void CreateWater(Chunk chunk)
         {
             var water = new GameObject("CoastWater");
@@ -294,6 +330,7 @@ namespace Race1.Game
             c.TreeCount = 0;
             c.RockCount = 0;
             c.PostCount = 0;
+            c.PillarCount = 0;
             c.LampCount = 0;
             _pool.Push(c);
         }

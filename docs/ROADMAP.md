@@ -67,7 +67,8 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 - [x] **G5. Woda na wybrzeżu.** Płaszczyzna wody poniżej poziomu morza w biomie Coast, prosty shader
   z odbiciem Fresnela, pianka na linii brzegu. Logika w Core (`Shoreline`, testy), siatka per chunk
   w Game (`CoastWaterBuilder`), shader `Race1/Water`. Woda jest rzadka: patrz dziennik.
-- [ ] **G6. Mosty i tunele w geometrii.** Filary pod mostami (flaga `Bridge`), tuba tunelu dla flagi C5.
+- [x] **G6. Mosty i tunele w geometrii.** Filary pod mostami (flaga `Bridge`), tuba tunelu dla flagi C5.
+  Geometria w Core (`StructureGeometry`, testy), filary i obudowa w Game (`StructureProps`). Nieobejrzane.
 - [ ] **G7. Dźwięki otoczenia.** Szum opon na poślizgu, wiatr zależny od prędkości, deszcz (pętla)
   generowane przez `EngineSynth`-podobne syntezatory w Core, odtwarzane w Game.
 - [ ] **G8. Poziomy szczegółów aut.** LOD (`LODGroup`) z uproszczoną karoserią dla dalekich aut.
@@ -79,6 +80,16 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 12, cykl godzinny) — G6 zrobione, z zastrzeżeniami. Core: `StructureGeometry` (rozstaw
+  filarów co 24 m, wysokość filara od gruntu do spodu pomostu z grubością 0,9 m, minimum 2 m, profil obudowy tunelu
+  jako półelipsa o półosiach szerokość drogi + 1,2 m i 5 m; testy w StructureGeometryTests). Game: `StructureProps`
+  buduje instancjonowane filary pod mostami (dwa z każdej strony, z gruntu naturalnego) i łukową obudowę tunelu
+  z normalnymi do wnętrza. Nawinięcie trójkątów zależy od normalnych. Pomiar na 50 km trasy (test tymczasowy,
+  usunięty przed commitem): mosty to 30–43 % próbek, tunele 10–25 %, filary w 31–45 % chunków. Stan ten odpowiada
+  uwadze z C5 o wysokim udziale mostów i tuneli w alpejskim terenie. Testy: CoreTests 171/171. UnityCheck bez
+  błędów. Nie sprawdzono w Unity: położenia obudowy względem asfaltu, kierunku nawinięcia z wnętrza tunelu,
+  wyglądu filarów ani kosztu klatki przy takim udziale tuneli. Następny: G7 (dźwięki otoczenia).
 
 - 2026-11-09 (uruchomienie 11, cykl godzinny) — G5 zrobione, z zastrzeżeniem o zasięgu. Core: `Shoreline` (poziom
   morza 0 m, próg biomu Coast 0,5, minimalna głębokość 0,2 m, pas piany 3 m; testy w ShorelineTests). Game:

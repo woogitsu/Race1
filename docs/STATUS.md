@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **164/164 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **171/171 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -51,7 +51,7 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
   skalibrowane na danych z opon. Testy w TyreConditionTests.
 - Trzy samochody o różnym charakterze (`VehicleCatalog`), oryginalne nazwy.
 - Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), wyścig z rywalami na siatce z odliczaniem i trzema poziomami trudności (`RivalRace`). Testy w CoreTests (RaceDirectorTests, RivalRaceTests).
-- Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Renderowanie tuneli i filarów mostów jeszcze nie istnieje. Udział jest wysoki w alpejskim terenie i wymaga strojenia.
+- Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Geometria (rozstaw filarów, wysokość, profil obudowy tunelu) w `StructureGeometry`, testy w StructureGeometryTests. Udział jest wysoki w alpejskim terenie i wymaga strojenia: na 50 km trasy 30–43 % próbek to most, a 10–25 % to tunel.
 - Latarnie nocą: wybór najbliższych N latarni z histerezą (`LampBudget`), testy w LampBudgetTests.
 - Poziom morza i brzeg (`Shoreline`): głębokość, próg biomu Coast, siła piany; testy w ShorelineTests.
 - Kamera fotograficzna (`PhotoOrbit`): orbita, zoom, ogniskowa i FOV z 24 mm sensora, nazwy zrzutów
@@ -87,6 +87,8 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Woda przybrzeżna: siatka per chunk poza krawędzią drogi (`CoastWaterBuilder`), tylko tam, gdzie biom Coast
   dominuje i teren leży poniżej 0 m. Shader `Race1/Water` (Fresnel, piana z koloru wierzchołków). Gdy shadera
   nie ma w buildzie, używany jest nieprzezroczysty materiał zapasowy. Nie sprawdzono w Unity.
+- Mosty i tunele w geometrii: instancjonowane filary pod mostami (co 24 m, po dwa z każdej strony)
+  i obudowa tunelu z łukiem zwróconym do wnętrza (`StructureProps`). Nie sprawdzono w Unity.
 - Garaż z tuningiem (TUNING): suwaki sprężyn, tłumienia, przełożenia i hamulców z procentową zmianą względem
   fabrycznej, wybór opon i RESET. Ustawienia są zapisane per auto w save i używane przy starcie przejazdu.
   Nie sprawdzono w Unity: układu, przeciągania suwaków i zapisu na urządzeniu.
@@ -108,8 +110,11 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
   LOD, PBR z teksturami ani licencjonowanych modeli. Wymagania mówią wprost, że to nie może być wersja docelowa.
 - **Brak budynków, znaków i barierek ze zdobieniami.** Świat ma teren, drogę, oznakowanie,
   drzewa, skały i latarnie. Latarnie nie zostały obejrzane w Unity, więc ich wygląd nocą jest nieznany.
-- **Tunele nie są renderowane jako tuby.** Flaga `Bridge` jest liczona, ale nie ma pilonów mostu.
-  Głęboki wykop jest zwykłą ścianą skalną.
+- **Mosty i tunele są narysowane, ale nieobejrzane.** Filary pod mostami są instancjonowane co 24 m po
+  dwa z każdej strony (`StructureProps`). Tunel ma obudowę z łukiem zwróconym do wnętrza. Filary pojawiają się
+  w 31–45 % chunków na trasie, więc są częste. Nie sprawdzono, czy obudowa leży poprawnie względem asfaltu,
+  czy nawinięcie trójkątów jest dobre z wnętrza tunelu i czy wysoki udział tuneli nie obciąża klatki. Głęboki
+  wykop nadal jest zwykłą ścianą terenu.
 - **Woda jest rzadka i nieobejrzana.** Pojawia się tylko w biomie Coast poniżej 0 m. Na 50 km trasy
   w pięciu ziarnach od 0 % do 2,8 % chunków ma wodę, a dla domyślnego ziarna gry (20260101) na tym odcinku
   nie ma jej wcale. Biom Coast zajmuje w świecie ok. 0,2–0,5 % powierzchni, więc to decyzja o świecie, nie błąd
@@ -187,7 +192,7 @@ zasłaniające typy `Text` i `Button`.
    w tabeli poniżej.
 2. Zmierzyć koszt budowy chunka i klatki w Unity Profilerze, przy 60 i 120 Hz.
 3. Zastąpić proceduralne samochody autorskimi modelami (Blender, LOD, PBR) lub modelami z licencją.
-4. Dodać tunele (tuba), mosty (filary) i barierki. Woda na wybrzeżu jest zrobiona, ale rzadka (patrz
+4. Obejrzeć w Unity filary i tuby tuneli (zrobione, nieobejrzane) oraz dodać barierki ozdobne. Woda na wybrzeżu jest zrobiona, ale rzadka (patrz
    „Woda jest rzadka” wyżej). Decyzja, czy zwiększyć wybrzeże w świecie, należy do właściciela projektu.
 5. Sprawdzić w Unity tryb AI Race i Photo Mode (kadr, zrzut do `persistentDataPath`, koszt). Oba są
    zaimplementowane, ale nieuruchomione.

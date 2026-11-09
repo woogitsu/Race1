@@ -265,6 +265,7 @@ namespace Race1.Game
                 _railMat, _postMat, _lampMat, _vegetation, seed);
             _chunks.BuildsPerFrame = _config.BuildsPerFrame;
             _chunks.WaterMaterial = CreateWaterMaterial();
+            _chunks.TunnelMaterial = RenderMaterials.Create(new Color(0.42f, 0.41f, 0.39f), 0f, 0.25f, null, false);
             _lampLights = new StreetLampLights(_worldRoot, _config.MaxLitStreetLamps);
         }
 
