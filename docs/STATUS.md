@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **53/53 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **120/120 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -28,6 +28,8 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 | Nasycenie opon w zakręcie | 1,26 g | < 1,35 g |
 | 0–72 km/h na mokrym, RWD / AWD | 7,50 s / 4,53 s | AWD szybsze |
 | Autopilot, 240 s na wygenerowanej drodze | 7092 m, 0 kolizji z barierą | brak wyjazdu z drogi |
+| Zużycie tylnej lewej opony, łuk R=100 m, autopilot, 20 s | 5,1e-4 (5 s) · 8,0e-4 (10 s) · 1,39e-3 (20 s) | rośnie monotonicznie |
+| Odchylenie od osi pasa, łuk R=60 m, autopilot | świeże 90 °C: 0,05 m · w pełni zużyte: 7,0 m · zimne 25 °C: 7,0 m | świeże trzymają linię, zużyte i zimne nie |
 | Ten sam przebieg przy różnych klatkach | różnica < 1e-6 przy tych samych krokach fizyki | niezależność od FPS |
 | Droga, 100 km | ciągła (odstęp próbek 2,000 m ±1e-6), kąt w stożku, bez NaN | wszystkie warunki spełnione |
 | Droga, odtworzenie po cofnięciu | identyczne próbki (bit w bit) | deterministyczne |
@@ -44,6 +46,9 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Fizyka: opony magic formula z poślizgiem połączonym, zawieszenie sprężyna-tłumik, napęd
   (FWD/RWD/AWD, turbo z opóźnieniem, skrzynia auto/ręczna), hamulce z fadingiem, ABS, TC, ESP,
   asysta kierownicy, aero, opór toczenia, bariera z kolizją.
+- Zużycie i temperatura opon (`TyreCondition`): zużycie rośnie z mocy poślizgu, temperatura z ciepła
+  tarcia i chłodzenia powietrzem; oba zmniejszają przyczepność. Stałe są dobrane z rozsądku, nie
+  skalibrowane na danych z opon. Testy w TyreConditionTests.
 - Trzy samochody o różnym charakterze (`VehicleCatalog`), oryginalne nazwy.
 - Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), testy w CoreTests.
 - Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Renderowanie tuneli i filarów mostów jeszcze nie istnieje. Udział jest wysoki w alpejskim terenie i wymaga strojenia.
@@ -109,7 +114,9 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - **Brak modelu kół na nierównościach**: nawierzchnia jest gładka, bez profilu wibracji.
 - **ESP działa jako moment korygujący**, nie jako rzeczywiste hamowanie pojedynczych kół.
 - **Brak wzajemnej fizyki zderzeń z ruchem AI** (kolizja jest zdarzeniem, bez odrzutu).
-- Opony nie mają temperatury ani zużycia; wpływ wody to współczynnik tarcia.
+- Model opon ma zużycie i temperaturę, ale bez rozkładu temperatury po szerokości bieżnika, bez
+  wpływu ciśnienia i bez kalibracji na danych z opon. Wizualnie zużycie nie jest jeszcze pokazane
+  (brak zmiany wyglądu opony). Wpływ wody to współczynnik tarcia.
 - Model nie zawiera sił bocznych wiatru ani aerodynamiki zależnej od pochylenia nadwozia.
 
 ### Dźwięk

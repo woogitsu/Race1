@@ -55,5 +55,7 @@ namespace Race1.Core
         public readonly double[] WheelSpeed = new double[4];
         public readonly double[] SlipRatio = new double[4];
         public readonly double[] SlipAngle = new double[4];
+        public readonly double[] TyreWear = new double[4];         // 0 new .. 1 finished
+        public readonly double[] TyreTemperature = new double[4];  // °C
     }
 }

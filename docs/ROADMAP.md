@@ -48,8 +48,10 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
   kontaktów spada względem obecnej wartości (7 na 2 minuty).
 - [x] **C5. Zdarzenia mostów i tuneli.** Flagi tunelu (`RoadSample.Tunnel`) na odcinkach pod
   wzniesieniem, z testami ciągłości. Renderowanie w Game w późniejszym punkcie.
-- [ ] **C6. Model wycieku opon i temperatury.** Opcjonalny parametr zużycia wpływający na grip.
-  Test: monotoniczność grip względem zużycia.
+- [x] **C6. Model wycieku opon i temperatury.** Zużycie opony rośnie z mocy poślizgu, temperatura
+  z ciepła tarcia i chłodzenia powietrzem; oba zmniejszają przyczepność (`TyreCondition`, używane
+  w `VehicleDynamics`). Test: monotoniczność grip względem zużycia i temperatury, zużycie rośnie na
+  łuku, świeże opony trzymają linię na łuku R=60, w pełni zużyte i zimne nie.
 
 ### Gra i grafika (weryfikowane przez UnityCheck)
 
@@ -74,6 +76,20 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 6, cykl godzinny) — C6 zrobione. `TyreCondition` (czyste funkcje): zużycie
+  rośnie proporcjonalnie do mocy poślizgu i nigdy nie maleje; grip zużycia spada monotonicznie do 0.78
+  przy pełnym zużyciu; temperatura ma okno optymalne 85–105 °C, poza nim grip spada do 0.65 przy
+  skrajnych wartościach; ciepło z poślizgu i chłodzenie powietrzem (stan ustalony 20 + 0.5·P/15).
+  `VehicleDynamics` mnoży przyczepność przez stan każdej opony, a `VehicleTelemetry` raportuje
+  `TyreWear` i `TyreTemperature`. Pierwsza wersja testów używała stałego skrętu bez gazu: auto wpadało
+  w bąk i stawało przy barierze, więc pomiar był bezużyteczny. Testy oparte na `TestWorld.Autopilot`
+  (stabilnym prowadzeniu po łuku). Wyniki pomiarów: zużycie tylnej lewej opony na łuku R=100 m
+  wynosi 5.1e-4 po 5 s, 8.0e-4 po 10 s, 1.39e-3 po 20 s; na łuku R=60 m maksymalne odchylenie od osi
+  pasa wynosi 0.048 m dla świeżych opon w 90 °C, a 7.0 m (wypadek) dla pełnego zużycia i dla
+  temperatury 25 °C. Ograniczenie: stałe modelu (`WearPerJoule`, przewodność chłodzenia, progi grip)
+  są dobrane z rozsądku, nie skalibrowane na danych z opon. Testy: CoreTests 120/120 (9 nowych w
+  TyreConditionTests), UnityCheck bez błędów. Następny: G1 (latarnie z prawdziwym światłem).
 
 - 2026-11-09 (uruchomienie 5, cykl godzinny) — C5 zrobione. `RoadSample.Tunnel` (natural ground ponad drogą) obok `Bridge`. Flagi przełączają się dopiero po utrzymaniu warunku przez 60 m (`StructureMinLength`), z histerezą wejścia i wyjścia; liczniki są w `RoadState`, więc punkty kontrolne i cofanie dają ten sam wynik. Pomiar pierwszej wersji: flaga migotała ok. 250 razy na 50 km, po zmianach 26–46 razy. Uwaga: tuneli i mostów jest dużo (ok. 12–25% i 30–40% próbek) z powodu amplitudy terenu alpejskiego, a droga nie może za nim nadążyć przy ograniczeniu nachylenia. To punkt do strojenia biomu, nie błąd mechaniki flag. Testy: CoreTests 111/111 (5 nowych w RoadStructureTests), UnityCheck bez błędów. Renderowanie flag to punkt G6. Następny: C6 (zużycie opon).
 - 2026-11-09 (uruchomienie 4, cykl godzinny) — C4 zrobione z zastrzeżeniem. Pomiar pokazał, że 7 kontaktów w poprzednim teście wynikało z gracza jadącego stałe 20 m/s w wolniejsze auto na dwupasmowej drodze, bez hamowania i bez miejsca na ucieczkę (jeden pas na kierunek). Zmiany: unik auta z tego samego kierunku, gdy szybszy gracz zbliża się z tyłu (`ShouldEvade`, sąsiedni pas), bezpieczna luka w obu kierunkach (`IsGapSafe`, uwzględnia prędkość względną), auto wjeżdżające na pas liczy się jako lider, `AddCar` do scenariuszy. Wyniki: hamujący gracz 2 min na wygenerowanej drodze — 0 kontaktów (także przed zmianą; kryterium spadku z 7 dotyczy gracza bez hamowania); czteropasmowa prosta — auto ustępuje, 0 kontaktów; dwupasmowa prosta z graczem bez hamowania — kontakt nieunikniony (test dokumentuje ograniczenie). CoreTests 106/106 (3 nowe w TrafficEvasionTests), UnityCheck bez błędów. Następny: G1 (latarnie z prawdziwym światłem) — to punkt warstwy Unity, a C5 (tunele) wymaga najpierw danych o tunelu w rdzeniu; wybieram C5.

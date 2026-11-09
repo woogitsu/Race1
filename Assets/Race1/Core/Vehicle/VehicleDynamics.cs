@@ -32,6 +32,8 @@ namespace Race1.Core
         private readonly double[] _driveTorque = new double[4];
         private readonly double[] _forceX = new double[4];
         private readonly double[] _forceY = new double[4];
+        private readonly double[] _tyreWear = new double[4];
+        private readonly double[] _tyreTemp = new double[4];
 
         // Road-relative state
         private double _s;
@@ -143,8 +145,20 @@ namespace Race1.Core
                 _slipAngle[i] = 0.0;
                 _forceX[i] = 0.0;
                 _forceY[i] = 0.0;
+                _tyreWear[i] = 0.0;
+                _tyreTemp[i] = TyreCondition.OperatingStartTemperature;
             }
             UpdateTelemetry();
+        }
+
+        /// <summary>Sets tyre wear (0 new .. 1 finished) and temperature (°C) on all four corners, for a fresh or used set.</summary>
+        public void ResetTyres(double wear, double temperatureC)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                _tyreWear[i] = Mathx.Clamp01(wear);
+                _tyreTemp[i] = temperatureC;
+            }
         }
 
         /// <summary>
@@ -323,9 +337,15 @@ namespace Race1.Core
 
                 double fz = _load[i];
                 double loadFactor = Mathx.Clamp(1.0 - Spec.LoadSensitivity * (fz / Spec.ReferenceTireLoad - 1.0), 0.55, 1.15);
-                double mu = Spec.GripDry * FrictionScale * _surfaceMu * loadFactor;
+                double condition = TyreCondition.GripMultiplier(_tyreWear[i], _tyreTemp[i]);
+                double mu = Spec.GripDry * FrictionScale * _surfaceMu * loadFactor * condition;
 
                 TireModel.Forces(mu, fz, slip, tanAlpha, out double fxw, out double fyw);
+
+                // Sliding power heats and wears the tyre: longitudinal slip (wheel speed vs ground) and lateral slip.
+                double slidingPower = Math.Abs(fxw * (r * _omega[i] - vwx)) + Math.Abs(fyw * vwy);
+                _tyreWear[i] = TyreCondition.AccumulateWear(_tyreWear[i], slidingPower, dt);
+                _tyreTemp[i] = TyreCondition.Heat(_tyreTemp[i], slidingPower, dt, TyreCondition.AmbientTemperature);
 
                 // Slope of the longitudinal force w.r.t. slip ratio, for an implicit (stable) wheel update.
                 const double eps = 1e-3;
@@ -395,6 +415,8 @@ namespace Race1.Core
                 t.WheelSpeed[i] = _omega[i];
                 t.SlipRatio[i] = _slipRatio[i];
                 t.SlipAngle[i] = _slipAngle[i];
+                t.TyreWear[i] = _tyreWear[i];
+                t.TyreTemperature[i] = _tyreTemp[i];
             }
         }
     }
