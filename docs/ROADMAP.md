@@ -60,7 +60,7 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
   z histerezą, testy), pula świateł w Game (`StreetLampLights`).
 - [x] **G2. Tryb wyścigu AI w menu i w sesji.** Podpięcie `RaceDirector` z C2 do `GameSession` i menu.
   Logika w Core (`RivalRace`, testy), tryb `AiRace` w menu i w sesji (`GameSession`, `RaceConfig`).
-- [ ] **G3. Tryb fotograficzny.** Pauza > „Photo”: swobodna kamera orbitalna, zmiana FOV i ogniskowej,
+- [x] **G3. Tryb fotograficzny.** (Orbita i ogniskowa w Core, `PhotoOrbit`; tryb w pauzie w Game.) Pauza > „Photo”: swobodna kamera orbitalna, zmiana FOV i ogniskowej,
   zapis zrzutu (`ScreenCapture`) do `persistentDataPath`.
 - [ ] **G4. Garaż z tuningiem.** Suwaki sprężyn, tłumienia, przełożeń w menu, zapis do `VehicleTuningData`
   (po C1).
@@ -78,6 +78,17 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 9, cykl godzinny) — G3 zrobione. Core: `PhotoOrbit` (orbita wokół auta, obrót
+  przeciąganiem z kątem ograniczonym do −2°…70°, zoom 3–40 m, ogniskowa 14–200 mm, FOV pionowy z 24 mm
+  sensora: 50 mm daje 27°) i `PhotoShots` (nazwy zrzutów w stałym formacie daty). Game: w pauzie przycisk PHOTO.
+  Świat jest zamrożony, a kamera krąży po orbicie wokół auta. Przeciąganie obraca kamerę, przyciski CLOSER,
+  FARTHER, TELE, WIDE i SHOOT działają, BACK wraca do pauzy. Zrzut: UI jest ukryte przez jedną klatkę, potem
+  `ScreenCapture.CaptureScreenshot` zapisuje PNG do `persistentDataPath`. Testy: CoreTests 145/145 (11 nowych
+  w PhotoOrbitTests). Pierwsza wersja testu zakładała ścisły spadek FOV także przy ogniskowej przyciętej do
+  maksimum. Poprawiono to na oczekiwanie niemalejące. UnityCheck bez błędów. Nie sprawdzono w Unity: kadru,
+  kierunku obrotu, zapisu zrzutu na urządzeniu ani układu przycisków przy innych proporcjach ekranu (Fold
+  składany). Następny: G4 (garaż z tuningiem).
 
 - 2026-11-09 (uruchomienie 8, cykl godzinny) — G2 zrobione. Core: `RivalRace` składa wyścig z gracza (Id 0)
   i rywali na siatce za startem (odstęp 12 m, pasy naprzemiennie), odlicza start (3 s, nikt się nie rusza)

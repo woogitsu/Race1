@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Race1.Core;
@@ -18,6 +19,7 @@ namespace Race1.Game
             Menu = 0,
             Driving = 1,
             Paused = 2,
+            Photo = 3,
         }
 
         private const float AutosaveSeconds = 30f;
@@ -89,6 +91,8 @@ namespace Race1.Game
         private double _raceOriginS;
         private float _raceEndTimer = -1f;
         private readonly List<CarView> _rivalViews = new List<CarView>();
+        private PhotoMode _photo;
+        private int _photoShots;
         private AppState _state = AppState.Menu;
         private Vector3d _origin;
         private double _hour = 12.0;
@@ -130,6 +134,7 @@ namespace Race1.Game
 
             _menu.Build(File.Exists(_saveService.FilePath));
             _menu.Chosen = OnMenuChoice;
+            _menu.PhotoDragged = OnPhotoDragged;
             EnterMenu();
         }
 
@@ -162,6 +167,9 @@ namespace Race1.Game
                     break;
                 case AppState.Paused:
                     // The frozen run stays on screen behind the pause panel; the camera is not moved.
+                    break;
+                case AppState.Photo:
+                    TickPhoto(dt);
                     break;
             }
 
@@ -273,6 +281,7 @@ namespace Race1.Game
             _weatherVisuals.BindRoads(_roadMats);
             _reflectionRig = new ReflectionProbeRig(_worldRoot);
             _post = new PostProcessingController();
+            _photo = new PhotoMode(_cam);
         }
 
         // ----- States -----
@@ -308,6 +317,31 @@ namespace Race1.Game
                 case MenuAction.MainMenu:
                     SaveNow();
                     EnterMenu();
+                    break;
+                case MenuAction.Photo:
+                    EnterPhoto();
+                    break;
+                case MenuAction.PhotoBack:
+                    ExitPhoto();
+                    break;
+                case MenuAction.PhotoCloser:
+                    _photo.Orbit.ZoomStepIn();
+                    UpdatePhotoInfo(null);
+                    break;
+                case MenuAction.PhotoFarther:
+                    _photo.Orbit.ZoomStepOut();
+                    UpdatePhotoInfo(null);
+                    break;
+                case MenuAction.PhotoTele:
+                    _photo.Orbit.StepFocal(1);
+                    UpdatePhotoInfo(null);
+                    break;
+                case MenuAction.PhotoWide:
+                    _photo.Orbit.StepFocal(-1);
+                    UpdatePhotoInfo(null);
+                    break;
+                case MenuAction.PhotoShoot:
+                    StartCoroutine(CapturePhoto());
                     break;
             }
         }
@@ -540,6 +574,73 @@ namespace Race1.Game
             }
 
             _hud.Tick(dt, BuildHudState(tm));
+        }
+
+        // ----- Photo mode -----
+
+        /// <summary>Freezes the run and opens the photo controls. The pause panel is hidden while they are shown.</summary>
+        private void EnterPhoto()
+        {
+            _state = AppState.Photo;
+            _hud.SetVisible(false);
+            _menu.ShowPhoto();
+            UpdatePhotoInfo(null);
+        }
+
+        private void ExitPhoto()
+        {
+            // The driving camera takes over again on resume, so it starts from the car, not from the photo pose.
+            _state = AppState.Paused;
+            _camera.Snap(_playerView);
+            _menu.ShowPause();
+        }
+
+        /// <summary>
+        /// The world stays frozen while photo mode runs. The camera follows the orbit around the car, and the
+        /// weather particles and post effects keep running so the frame is not a dead still.
+        /// </summary>
+        private void TickPhoto(float dt)
+        {
+            Vector3d car = _playerView.WorldPosition - _origin;
+            _photo.Apply(car);
+            _weatherVisuals.Tick(dt, _weather, CarView.ToFloat(car), CarView.ToFloat(_playerView.WorldForward), 0f);
+            _post.Tick(dt, new PostState
+            {
+                Night01 = _night01,
+                Golden01 = _golden01,
+                Rain01 = (float)_weather.Rain,
+                Fog01 = (float)_weather.Fog,
+            });
+        }
+
+        private void OnPhotoDragged(double dx, double dy)
+        {
+            if (_state == AppState.Photo) _photo.Orbit.Drag(dx, dy, Screen.height);
+        }
+
+        /// <summary>Shows the orbit settings. A null status leaves the status line as it is.</summary>
+        private void UpdatePhotoInfo(string status)
+        {
+            PhotoOrbit o = _photo.Orbit;
+            _menu.SetPhotoInfo($"{o.FocalLengthMm:F0} mm  ·  {o.VerticalFovDegrees:F0}° field  ·  {o.Distance:F1} m", status);
+        }
+
+        /// <summary>
+        /// Hides the controls for one frame, then writes the screenshot to the app's persistent folder. The
+        /// screenshot is taken after the frame has rendered, so the picture contains the world only.
+        /// </summary>
+        private IEnumerator CapturePhoto()
+        {
+            _menu.SetPhotoUiVisible(false);
+            yield return new WaitForEndOfFrame();
+            string name = PhotoShots.FileName(DateTime.Now, _photoShots++);
+            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(Application.persistentDataPath, name));
+            yield return null;
+            if (_state == AppState.Photo)
+            {
+                _menu.SetPhotoUiVisible(true);
+                UpdatePhotoInfo("Saving " + name);
+            }
         }
 
         /// <summary>Creates the rivals for a new race: the core race, and one visual car per rival.</summary>

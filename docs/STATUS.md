@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **134/134 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **145/145 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -53,6 +53,8 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), wyścig z rywalami na siatce z odliczaniem i trzema poziomami trudności (`RivalRace`). Testy w CoreTests (RaceDirectorTests, RivalRaceTests).
 - Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Renderowanie tuneli i filarów mostów jeszcze nie istnieje. Udział jest wysoki w alpejskim terenie i wymaga strojenia.
 - Latarnie nocą: wybór najbliższych N latarni z histerezą (`LampBudget`), testy w LampBudgetTests.
+- Kamera fotograficzna (`PhotoOrbit`): orbita, zoom, ogniskowa i FOV z 24 mm sensora, nazwy zrzutów
+  (`PhotoShots`); testy w PhotoOrbitTests.
 - Ruch AI: unik na wielopasmowych drogach, bezpieczna luka przy zmianie pasa, testy scenariuszy z hamującym graczem (`TrafficEvasionTests`). Ograniczenie: na dwupasmowej drodze auto nie ma gdzie uciec, więc gracz jadący bez hamowania w wolniejsze auto uderzy.
 - Harmonogram pogody i pory dnia (`WeatherSchedule`): deterministyczne przejścia pogody i godzina doby; testy płynności, testy w CoreTests. Jeszcze nie podpięty do GameSession.
 - Strojenie aut w garażu (`VehicleTuning`): sprężyny, tłumienie, przełożenie, hamulce i mieszanka opon z limitami zakresów; testy w CoreTests.
@@ -74,6 +76,9 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Ruch AI jako osobne wizualne samochody.
 - Tryb AI Race w menu: siatka pięciu rywali za startem, odliczanie z hamulcem, linia HUD z miejscem
   i dystansem, powrót do menu po mecie. Rywale poza strumieniowanym odcinkiem drogi są ukryci.
+- Tryb foto z pauzy (PHOTO): orbita przeciąganiem, zoom, ogniskowa, zrzut PNG do `persistentDataPath`
+  przez `ScreenCapture`. Świat jest zamrożony, a UI ukryte na czas zrzutu. Nie uruchomiono w Unity, więc
+  kadr, zapis na urządzeniu i kierunek obrotu nie są sprawdzone.
 - Kamery i przełączanie widoków; HUD (prędkość, bieg, obrotomierz, asysty, tryb, pogoda, flash kolizji).
 - Kontrolki dotykowe (pady, gaz, hamulec, ręczny, biegi, widok, pauza) oraz pad, klawiatura i przechył.
 - Silnik audio przez `OnAudioFilterRead` z buforem przydzielonym raz.
@@ -105,8 +110,8 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - Brak dedykowanego shadera asfaltu z połyskiem; używany jest URP Lit z teksturą proceduralną.
 
 ### Rozgrywka
-- **Brak Photo Mode.** Tryb AI Race jest w menu, ale jego balans nie został zmierzony: w testach najszybszy
-  rywal na 3000 m jedzie 78–85 s w zależności od trudności, a gracz nie był mierzony.
+- **Tryb AI Race: balans nie został zmierzony.** W testach najszybszy rywal na 3000 m jedzie 78–85 s
+  w zależności od trudności, a gracz nie był mierzony.
 - **Free Ride** to Endless Drive z wyborem pogody i pory dnia; brak suwaków trudności i gęstości ruchu w menu.
 - **Strojenie auta w garażu nie jest wystawione w UI** (sprężyny, przełożenia, zawieszenie). Model
   to przyjmuje (`VehicleSpec`, `VehicleTuningData`), ale nie ma ekranów.
@@ -171,7 +176,8 @@ zasłaniające typy `Text` i `Button`.
 2. Zmierzyć koszt budowy chunka i klatki w Unity Profilerze, przy 60 i 120 Hz.
 3. Zastąpić proceduralne samochody autorskimi modelami (Blender, LOD, PBR) lub modelami z licencją.
 4. Dodać tunele (tuba), mosty (filary), wodę i barierki.
-5. Dodać tryb AI Racing i Photo Mode.
+5. Sprawdzić w Unity tryb AI Race i Photo Mode (kadr, zrzut do `persistentDataPath`, koszt). Oba są
+   zaimplementowane, ale nieuruchomione.
 6. Wystawić strojenie auta w garażu (sprężyny, przełożenia, zapis w `VehicleTuningData`).
 
 ## Tabela testów urządzeniowych (do uzupełnienia)

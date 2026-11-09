@@ -1,6 +1,7 @@
 using System;
 using Race1.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Race1.Game
@@ -21,6 +22,13 @@ namespace Race1.Game
         Resume,
         Restart,
         MainMenu,
+        Photo,
+        PhotoBack,
+        PhotoCloser,
+        PhotoFarther,
+        PhotoTele,
+        PhotoWide,
+        PhotoShoot,
     }
 
     /// <summary>Choices made on the menu, carried into the run.</summary>
@@ -54,9 +62,15 @@ namespace Race1.Game
         public MenuOptions Options { get; } = new MenuOptions();
         public Action<MenuAction> Chosen;
 
+        /// <summary>Drag across the photo-mode surface, as pixel deltas (x right, y down).</summary>
+        public Action<double, double> PhotoDragged;
+
         private Canvas _canvas;
         private RectTransform _mainPanel;
         private RectTransform _pausePanel;
+        private RectTransform _photoPanel;
+        private Text _photoInfo;
+        private Text _photoStatus;
         private Text _carLine;
         private Text _specLine;
         private Text _optionLine;
@@ -105,11 +119,26 @@ namespace Race1.Game
             _optionLine = TextLabel(garage, new RectN(0.05, 0.7, 0.9, 0.12), "", 26, TextAnchor.UpperLeft);
             _bestLine = TextLabel(garage, new RectN(0.05, 0.84, 0.9, 0.12), "", 26, TextAnchor.UpperLeft);
 
-            _pausePanel = Panel(rootRt, new RectN(0.35, 0.3, 0.3, 0.4), new Color(0.02f, 0.03f, 0.05f, 0.9f));
-            TextLabel(_pausePanel, new RectN(0.05, 0.03, 0.9, 0.14), "PAUSED", 56, TextAnchor.MiddleCenter);
-            MenuButton(_pausePanel, new RectN(0.1, 0.25, 0.8, 0.14), "RESUME", () => Chosen?.Invoke(MenuAction.Resume));
-            MenuButton(_pausePanel, new RectN(0.1, 0.45, 0.8, 0.14), "RESTART", () => Chosen?.Invoke(MenuAction.Restart));
-            MenuButton(_pausePanel, new RectN(0.1, 0.65, 0.8, 0.14), "MAIN MENU", () => Chosen?.Invoke(MenuAction.MainMenu));
+            _pausePanel = Panel(rootRt, new RectN(0.35, 0.22, 0.3, 0.6), new Color(0.02f, 0.03f, 0.05f, 0.9f));
+            TextLabel(_pausePanel, new RectN(0.05, 0.03, 0.9, 0.12), "PAUSED", 56, TextAnchor.MiddleCenter);
+            MenuButton(_pausePanel, new RectN(0.1, 0.2, 0.8, 0.12), "RESUME", () => Chosen?.Invoke(MenuAction.Resume));
+            MenuButton(_pausePanel, new RectN(0.1, 0.36, 0.8, 0.12), "PHOTO", () => Chosen?.Invoke(MenuAction.Photo));
+            MenuButton(_pausePanel, new RectN(0.1, 0.52, 0.8, 0.12), "RESTART", () => Chosen?.Invoke(MenuAction.Restart));
+            MenuButton(_pausePanel, new RectN(0.1, 0.68, 0.8, 0.12), "MAIN MENU", () => Chosen?.Invoke(MenuAction.MainMenu));
+
+            // Photo mode: a full-screen drag surface sits under the controls, so drags orbit the camera and taps
+            // reach the buttons.
+            _photoPanel = Panel(rootRt, new RectN(0, 0, 1, 1), new Color(0f, 0f, 0f, 0f));
+            _photoPanel.gameObject.AddComponent<PhotoDragSurface>().Dragged = (dx, dy) => PhotoDragged?.Invoke(dx, dy);
+            _photoInfo = TextLabel(_photoPanel, new RectN(0.02, 0.02, 0.72, 0.06), "", 34, TextAnchor.MiddleLeft);
+            _photoStatus = TextLabel(_photoPanel, new RectN(0.02, 0.085, 0.72, 0.05), "", 26, TextAnchor.MiddleLeft);
+            MenuButton(_photoPanel, new RectN(0.77, 0.02, 0.21, 0.06), "BACK", () => Chosen?.Invoke(MenuAction.PhotoBack));
+            MenuButton(_photoPanel, new RectN(0.02, 0.86, 0.18, 0.09), "CLOSER", () => Chosen?.Invoke(MenuAction.PhotoCloser));
+            MenuButton(_photoPanel, new RectN(0.21, 0.86, 0.18, 0.09), "FARTHER", () => Chosen?.Invoke(MenuAction.PhotoFarther));
+            MenuButton(_photoPanel, new RectN(0.40, 0.86, 0.18, 0.09), "WIDE", () => Chosen?.Invoke(MenuAction.PhotoWide));
+            MenuButton(_photoPanel, new RectN(0.59, 0.86, 0.18, 0.09), "TELE", () => Chosen?.Invoke(MenuAction.PhotoTele));
+            MenuButton(_photoPanel, new RectN(0.78, 0.86, 0.20, 0.09), "SHOOT", () => Chosen?.Invoke(MenuAction.PhotoShoot));
+            _photoPanel.gameObject.SetActive(false);
 
             Refresh();
             ShowMain();
@@ -120,6 +149,7 @@ namespace Race1.Game
             _canvas.enabled = true;
             _mainPanel.gameObject.SetActive(true);
             _pausePanel.gameObject.SetActive(false);
+            _photoPanel.gameObject.SetActive(false);
         }
 
         public void ShowPause()
@@ -127,6 +157,28 @@ namespace Race1.Game
             _canvas.enabled = true;
             _mainPanel.gameObject.SetActive(false);
             _pausePanel.gameObject.SetActive(true);
+            _photoPanel.gameObject.SetActive(false);
+        }
+
+        public void ShowPhoto()
+        {
+            _canvas.enabled = true;
+            _mainPanel.gameObject.SetActive(false);
+            _pausePanel.gameObject.SetActive(false);
+            _photoPanel.gameObject.SetActive(true);
+        }
+
+        /// <summary>Hides the photo controls while a shot is taken, so they stay out of the picture.</summary>
+        public void SetPhotoUiVisible(bool visible)
+        {
+            _photoPanel.gameObject.SetActive(visible);
+        }
+
+        /// <summary>Updates the photo-mode lines. A null argument leaves that line unchanged.</summary>
+        public void SetPhotoInfo(string info, string status)
+        {
+            if (info != null) _photoInfo.text = info;
+            if (status != null) _photoStatus.text = status;
         }
 
         public void Hide()
@@ -162,6 +214,31 @@ namespace Race1.Game
         }
 
         private static int Wrap(int v, int count) => ((v % count) + count) % count;
+
+        /// <summary>Full-screen drag area for photo mode. Reports each drag step as a pixel delta.</summary>
+        public sealed class PhotoDragSurface : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
+        {
+            public Action<double, double> Dragged;
+
+            private Vector2 _last;
+            private bool _active;
+
+            public void OnPointerDown(PointerEventData e)
+            {
+                _last = e.position;
+                _active = true;
+            }
+
+            public void OnDrag(PointerEventData e)
+            {
+                if (!_active) return;
+                Vector2 now = e.position;
+                Dragged?.Invoke(now.x - _last.x, now.y - _last.y);
+                _last = now;
+            }
+
+            public void OnPointerUp(PointerEventData e) => _active = false;
+        }
 
         private RectTransform Panel(RectTransform parent, RectN r, Color colour)
         {
