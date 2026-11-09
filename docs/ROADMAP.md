@@ -105,6 +105,10 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
 
+- 2026-11-09 (uruchomienie 24, cykl godzinny) — kolejka nadal pusta, bez nowych commitów na gałęzi. Weryfikacja:
+  CoreTests 232/232, UnityCheck bez błędów. Blokady bez zmian (brak Unity Editora i urządzenia).
+
+
 - 2026-11-09 (uruchomienie 23, cykl godzinny) — kolejka nadal pusta, bez nowych commitów na gałęzi. Weryfikacja:
   CoreTests 232/232, UnityCheck bez błędów. Blokady bez zmian (brak Unity Editora i urządzenia).
 
