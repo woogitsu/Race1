@@ -80,6 +80,7 @@ namespace Race1.Game
         private CarView _playerView;
         private EngineAudio _engineAudio;
         private AmbientAudio _ambient;
+        private double _snowCover;
         private TrafficView _trafficView;
         private TrafficSimulation _traffic;
         private VehicleDynamics _player;
@@ -160,6 +161,14 @@ namespace Race1.Game
             {
                 _skyTimer = 1f;
                 UpdateSky();
+            }
+
+            // Snow on the ground follows the falling snow, building and melting at a limited rate.
+            double snowNext = SnowCover.Step(_snowCover, SnowCover.Target(_weather.Snow), dt);
+            if (System.Math.Abs(snowNext - _snowCover) > 0.001 && _chunks != null)
+            {
+                _snowCover = snowNext;
+                _chunks.SetSnowCover(_snowCover);
             }
 
             switch (_state)

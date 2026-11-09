@@ -20,6 +20,7 @@ namespace Race1.Game
             public MeshFilter Filter;
             public MeshRenderer Renderer;
             public Material TerrainMaterial;
+            public Color TerrainTint;
             public GameObject Rail;
             public MeshFilter RailFilter;
             public MeshRenderer RailRenderer;
@@ -43,6 +44,11 @@ namespace Race1.Game
         }
 
         private const int MaxPerDraw = 1023;
+
+        /// <summary>Colour of fresh snow on the terrain, before the lighting.</summary>
+        private static readonly Color SnowTint = new Color(0.92f, 0.94f, 0.97f);
+
+        private double _snowCover;
 
         /// <summary>Lamp keys are chunk index times this stride plus the slot, so keys stay unique for any chunk.</summary>
         public const long LampKeyStride = 4096;
@@ -170,6 +176,25 @@ namespace Race1.Game
         }
 
         /// <summary>
+        /// Sets how much snow lies on the terrain, 0 bare to 1 covered, and updates the chunks in view. The ground
+        /// blends from its biome colour towards snow white, so the change is smooth. The snow texture is not used.
+        /// </summary>
+        public void SetSnowCover(double cover)
+        {
+            _snowCover = double.IsNaN(cover) ? 0.0 : System.Math.Max(0.0, System.Math.Min(1.0, cover));
+            foreach (Chunk c in _active.Values)
+            {
+                if (c.TerrainMaterial != null) ApplyTerrainTint(c);
+            }
+        }
+
+        private void ApplyTerrainTint(Chunk chunk)
+        {
+            Color tint = Color.Lerp(chunk.TerrainTint, SnowTint, (float)_snowCover);
+            TerrainMaterialFactory.ApplyBiomeTint(chunk.TerrainMaterial, tint);
+        }
+
+        /// <summary>
         /// Collects the world positions of every street lamp in the active chunks, relative to the floating origin,
         /// and a stable key per lamp (chunk index and slot) that survives between frames. The buffers are grown
         /// when needed and reused otherwise. Returns the number of valid entries.
@@ -216,7 +241,8 @@ namespace Race1.Game
             // Terrain: a per-chunk instance of the biome's ground material, tinted by the biome colour.
             if (chunk.TerrainMaterial != null) Object.Destroy(chunk.TerrainMaterial);
             chunk.TerrainMaterial = new Material(_terrainMats.ForBiome(data.Biome)) { name = "TerrainChunk" };
-            TerrainMaterialFactory.ApplyBiomeTint(chunk.TerrainMaterial, data.TerrainTint);
+            chunk.TerrainTint = data.TerrainTint;
+            ApplyTerrainTint(chunk);
             chunk.Renderer.sharedMaterials = new[] { _roads.Asphalt, chunk.TerrainMaterial, _roads.Marking };
 
             // Roadside: guardrail mesh (already relative to the chunk origin), posts and lamps.

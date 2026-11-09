@@ -85,9 +85,10 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 Kolejka G1–G10 jest zrobiona. Poniższe punkty wynikają z listy „Świadomie zostawione braki” w `docs/STATUS.md`
 i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je w kolejności.
 
-- [ ] **H1. Śnieg na nawierzchni i terenie.** Core: `SnowCover.Amount(snow01)`, monotoniczne, zero bez śniegu,
-  z ograniczoną szybkością narastania w czasie. Game: podpięcie `TerrainMaterialFactory.Snow` do chunków, gdy
-  pokrycie przekracza próg. Test: monotoniczność, zakres 0–1, ograniczenie szybkości.
+- [x] **H1. Śnieg na nawierzchni i terenie.** Core: `SnowCover` (cel z ilości śniegu, narastanie i topnienie
+  z ograniczoną szybkością), testy w SnowCoverTests. Game: kolor chunków miesza się z bielą według pokrycia.
+  Odstępstwo od planu: tekstura `TerrainMaterialFactory.Snow` nie jest podpinana, bo przełączenie materiału dałoby
+  skok na wszystkich chunkach naraz. Mieszanie tekstur w shaderze zostaje jako osobny krok.
 - [ ] **H2. Krople na szybie w deszczu.** Core: `WindscreenWetness`, rośnie z deszczem, maleje z prędkością
   (wycieraczki), zakres 0–1. Game: nakładka na widok z kokpitu. Test: wzrost z deszczem, spadek z prędkością.
 - [ ] **H3. Ślady opon na poślizgu.** Core: `SkidMarkModel.Intensity(squealLevel)` oraz odstęp śladów wzdłuż
@@ -100,6 +101,15 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 17, cykl godzinny) — H1 zrobione, z odstępstwem. Core: `SnowCover` (cel to łagodna rampa
+  od 0,15 do 0,6 z ilości śniegu pogodowego; pokrycie narasta z szybkością 0,04/s, czyli pełne w ok. 25 s, i topnieje
+  wolniej, 0,02/s, czyli w ok. 50 s; nigdy nie przekracza celu; złe dane nie zmieniają stanu; testy w SnowCoverTests).
+  Game: `RoadChunkStreamer.SetSnowCover` miesza kolor chunków z bielą (`Color.Lerp`, przez istniejący
+  `ApplyBiomeTint`); `GameSession` co klatkę przesuwa pokrycie w stronę celu i przekazuje zmiany powyżej 0,001.
+  Odstępstwo: tekstury `TerrainMaterialFactory.Snow` nie używam, bo przełączenie materiału zmieniłoby wszystkie
+  chunki w jednej klatce. Testy: CoreTests 206/206 (6 nowych). UnityCheck: po poprawce nazwy `System.Math` bez
+  błędów. Blokady: brak Unity Editora i urządzenia; wygląd śniegu nieobejrzany. Następny: H2 (krople na szybie).
 
 - 2026-11-09 (uruchomienie 16, cykl godzinny) — G10 zrobione: przegląd jakości w `docs/STATUS.md`. Dodano listę
   wizualną (każdy element: plik w kodzie, stan „napisane / nieobejrzane / brak”, co sprawdzić na urządzeniu),

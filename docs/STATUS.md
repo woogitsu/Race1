@@ -10,7 +10,7 @@ skompilowane, ale nieobejrzane ani nieusłyszane** w Unity. Nie ma w tym środow
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **200/200 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **206/206 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -56,7 +56,7 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
 | Filary mostów, obudowa tuneli | `StructureProps` | napisane, nieobejrzane | położenie względem asfaltu, nawinięcie z wnętrza tunelu |
 | Niebo, słońce, gwiazdy, chmury, zachód | `Race1/Sky`, `SkyModel`, `Atmosphere`, `GameSession.UpdateSky` | napisane, nieobejrzane | kolor w złotej godzinie, gwiazdy w nocy |
 | Deszcz i śnieg (cząsteczki), mgła | `WeatherVisuals`, `WeatherState` | napisane, nieobejrzane | gęstość cząsteczek, widoczność w mgle |
-| Śnieg na nawierzchni i terenie | `TerrainMaterialFactory.Snow` | **brak podpięcia**: materiał jest budowany, nigdzie nie używany | — |
+| Śnieg na terenie | `SnowCover` (Core), `RoadChunkStreamer.SetSnowCover` | napisane, nieobejrzane: kolor terenu miesza się z bielą, tekstura `TerrainMaterialFactory.Snow` nie jest używana | czy przejście jest płynne, czy biel nie wygląda płasko |
 | Mokra nawierzchnia | `RoadMaterialFactory.SetWetness` | napisane, nieobejrzane | ciemniejszy asfalt, bez refleksów |
 | Post-processing (bloom, tonemapping, winieta, ziarno) | `PostProcessingController` | napisane, nieobejrzane | czy nie przepala się noc i nie ciemnieje dzień |
 | Odbicia otoczenia | `ReflectionProbeRig` | napisane, nieobejrzane | czy sonda nie zostawia artefaktów na karoserii |
@@ -92,6 +92,8 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
 - Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Geometria (rozstaw filarów, wysokość, profil obudowy tunelu) w `StructureGeometry`, testy w StructureGeometryTests. Udział jest wysoki w alpejskim terenie i wymaga strojenia: na 50 km trasy 30–43 % próbek to most, a 10–25 % to tunel.
 - Latarnie nocą: wybór najbliższych N latarni z histerezą (`LampBudget`), testy w LampBudgetTests.
 - Poziom morza i brzeg (`Shoreline`): głębokość, próg biomu Coast, siła piany; testy w ShorelineTests.
+- Pokrycie śniegiem (`SnowCover`): cel z ilości śniegu, narastanie i topnienie z ograniczoną szybkością;
+  testy w SnowCoverTests.
 - Kamera fotograficzna (`PhotoOrbit`): orbita, zoom, ogniskowa i FOV z 24 mm sensora, nazwy zrzutów
   (`PhotoShots`); testy w PhotoOrbitTests.
 - Ruch AI: unik na wielopasmowych drogach, bezpieczna luka przy zmianie pasa, testy scenariuszy z hamującym graczem (`TrafficEvasionTests`). Ograniczenie: na dwupasmowej drodze auto nie ma gdzie uciec, więc gracz jadący bez hamowania w wolniejsze auto uderzy.
@@ -129,6 +131,8 @@ renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`
 - Dźwięki otoczenia (`AmbientAudio`): wiatr, pisk opon i deszcz z tej samej syntezy. Wyciszane w pauzie,
   trybie foto i menu. Nie sprawdzono słuchem na urządzeniu.
 - Menu: start, pauza, garaż z obracającym się autem, wybór trybu/auta/lakieru/pogody/pory dnia/asyst.
+- Śnieg na terenie: kolor chunków miesza się z bielą według pokrycia (`RoadChunkStreamer.SetSnowCover`).
+  Nie sprawdzono w Unity.
 - Woda przybrzeżna: siatka per chunk poza krawędzią drogi (`CoastWaterBuilder`), tylko tam, gdzie biom Coast
   dominuje i teren leży poniżej 0 m. Shader `Race1/Water` (Fresnel, piana z koloru wierzchołków). Gdy shadera
   nie ma w buildzie, używany jest nieprzezroczysty materiał zapasowy. Nie sprawdzono w Unity.
@@ -174,8 +178,9 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - **Efekty pogodowe są ograniczone.** Cząsteczki deszczu i śniegu istnieją (`WeatherVisuals`), ale nie
   ma kropli na szybie, rozprysków ani śladów opon. Pogoda wpływa też na przyczepność, mgłę, kolor nieba
   i nasycenie nawierzchni.
-- **Śnieg nie leży na terenie.** Materiał `TerrainMaterialFactory.Snow` jest budowany, ale nigdzie nie
-  przypisany. Śnieg w grze to tylko cząsteczki.
+- **Śnieg na terenie jest tylko kolorem.** Pokrycie narasta w ciągu ok. 25 s i topnieje w ok. 50 s
+  (`SnowCover`), a kolor terenu miesza się z bielą. Tekstura `TerrainMaterialFactory.Snow` nie jest używana:
+  pokazanie jej wymagałoby mieszania tekstur w shaderze terenu, a przełączanie materiału dałoby skok.
 - **Brak refleksów mokrego asfaltu** (SSR/planar); mokra nawierzchnia to niższa przyczepność i ciemniejszy kolor.
 - Brak dedykowanego shadera asfaltu z połyskiem; używany jest URP Lit z teksturą proceduralną.
 
@@ -251,7 +256,7 @@ To są braki odłożone celowo. Każdy ma powód i warunek, który by go zamkną
 | Licencjonowane lub autorskie modele aut, wnętrze, PBR | Nie ma zasobów w repozytorium ani licencji; wymagania zakazują kopiowania cudzych zasobów | Autorskie modele od artysty albo zakupiony zasób z licencją |
 | Ślady opon, dym, iskry, pył, rozpryski, krople na szybie | Efekty cząsteczkowe kosztują klatkę na telefonie, a wydajności nie zmierzono | Pomiar w profilerze na urządzeniu, potem ostrożne efekty w ramach budżetu z G9 |
 | Refleksy mokrego asfaltu (SSR albo planar) | Koszt renderingu, którego nie da się sprawdzić bez urządzenia | Planarne odbicie na jednym odcinku albo tańszy odblask w shaderze drogi |
-| Śnieg leżący na terenie | Materiał istnieje, ale wygląd i koszt nie są rozstrzygnięte | Podpięcie `TerrainMaterialFactory.Snow` do pogody śnieżnej po przeglądzie wyglądu |
+| Tekstura śniegu na terenie | Kolor terenu już miesza się z bielą; tekstura wymagałaby mieszania w shaderze | Blend tekstur w shaderze terenu, po przeglądzie wyglądu na urządzeniu |
 | Częstość wybrzeża w świecie (woda jest rzadka) | To decyzja o świecie, nie o kodzie; zmiana wpływa na całą generację | Decyzja właściciela projektu: więcej biomu Coast albo osobne odcinki nadmorskie |
 | Kalibracja: stałe opon, poziomy dźwięku, progi LOD, limity budżetu | Brak danych z opon i brak pomiaru na urządzeniu | Testy na urządzeniu i pomiary wzorcowe |
 | Rywale bez fizycznej kolizji z graczem | Świadome uproszczenie: wyścig opiera się na odstępie IDM | Model kolizji z odrzutem, jeśli wyścig tego wymaga |
