@@ -105,6 +105,12 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
 
+- 2026-11-09 (uruchomienie 22, cykl godzinny) — kolejka nadal pusta. Gałąź nie ma nowych commitów ani nowych punktów
+  od poprzedniego przebiegu, więc nic nie wykonano. Weryfikacja: CoreTests 232/232, UnityCheck bez błędów. Blokady
+  bez zmian: brak Unity Editora i urządzenia; licencja Unity po stronie użytkownika. Czeka na decyzję właściciela
+  (propozycje w dzienniku uruchomienia 21).
+
+
 - 2026-11-09 (uruchomienie 21, cykl godzinny) — kolejka pusta. Nie ma nieukończonego punktu: G1–G10 i H1–H4 są
   zrobione. Nie dopisano nowego zakresu, bo wybór kolejnych punktów należy do właściciela projektu. Weryfikacja:
   CoreTests 232/232, UnityCheck bez błędów, drzewo czyste. Propozycje do decyzji: (1) prawdziwe odbicia planarne
