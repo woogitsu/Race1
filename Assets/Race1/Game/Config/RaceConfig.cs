@@ -17,8 +17,14 @@ namespace Race1.Game
         public double MaxTurnPerKnot = 0.4;
 
         [Header("Streaming")]
+        [Tooltip("Not used. The chunk limits are in Budgets, one row per quality tier.")]
         public int ChunksAheadMax = 14;
         public int BuildsPerFrame = 2;
+
+        [Header("Performance budget")]
+        [Tooltip("Limits per quality tier, in order: battery saver, balanced, high, ultra. Values outside the safe " +
+                 "ranges are clamped, and a missing table falls back to the defaults.")]
+        public PerformanceLimits[] Budgets = PerformanceBudget.Defaults();
 
         [Header("Traffic")]
         public int MaxTrafficCars = 14;

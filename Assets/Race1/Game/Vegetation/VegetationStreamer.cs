@@ -48,6 +48,12 @@ namespace Race1.Game
         private readonly Material _rockMaterial;
         private readonly Matrix4x4[] _scratch = new Matrix4x4[MaxPerDraw];
 
+        // Per-frame working lists for the budgeted draw. Reused, so a frame does not allocate them again.
+        private readonly List<RoadChunkStreamer.Chunk> _visible = new List<RoadChunkStreamer.Chunk>();
+        private double[] _distanceKey = new double[0];
+        private int[] _available = new int[0];
+        private int[] _allocated = new int[0];
+
         /// <summary>
         /// Builds two meshes per species and per rock (two seeds each, so the variety repeats less) and prepares
         /// the materials: bark gets the bark texture, needles the needle cluster, foliage the leaf card.
@@ -151,26 +157,89 @@ namespace Race1.Game
             }
         }
 
-        /// <summary>Draws the chunks in view. Matrices are chunk-relative; the chunk offset is applied here.</summary>
+        /// <summary>Draws the chunks in view with no instance limit.</summary>
         public void Draw(IEnumerable<RoadChunkStreamer.Chunk> chunks, Vector3d origin)
         {
+            Draw(chunks, origin, int.MaxValue);
+        }
+
+        /// <summary>
+        /// Draws the chunks in view, with at most <paramref name="maxInstances"/> tree and rock instances in total. The
+        /// nearest chunks are served first, so the budget cuts the far ones. Matrices are chunk-relative; the chunk offset
+        /// is applied here.
+        /// </summary>
+        public void Draw(IEnumerable<RoadChunkStreamer.Chunk> chunks, Vector3d origin, int maxInstances)
+        {
+            _visible.Clear();
             foreach (RoadChunkStreamer.Chunk chunk in chunks)
             {
-                if (!chunk.Go.activeInHierarchy) continue;
-                Vector3 offset = new Vector3((float)(chunk.Origin.X - origin.X), (float)(chunk.Origin.Y - origin.Y),
-                    (float)(chunk.Origin.Z - origin.Z));
-                Matrix4x4 root = Matrix4x4.Translate(offset);
-                int pick = MeshPick(chunk.Index);
-
-                if (chunk.TreeCount > 0 && chunk.TreeVariant >= 0 && chunk.TreeVariant < _species.Length)
-                {
-                    SpeciesSet set = _species[chunk.TreeVariant];
-                    Mesh treeMesh = set.Meshes[pick];
-                    DrawBatch(treeMesh, set.Bark, root, chunk.Trees, chunk.TreeCount, BarkSub);
-                    DrawBatch(treeMesh, set.Leaves, root, chunk.Trees, chunk.TreeCount, FoliageSub);
-                }
-                DrawBatch(_rocks[pick], _rockMaterial, root, chunk.Rocks, chunk.RockCount, BarkSub);
+                if (chunk.Go.activeInHierarchy) _visible.Add(chunk);
             }
+
+            int n = _visible.Count;
+            if (_distanceKey.Length < n)
+            {
+                _distanceKey = new double[n];
+                _available = new int[n];
+                _allocated = new int[n];
+            }
+            for (int i = 0; i < n; i++)
+            {
+                Vector3d d = _visible[i].Origin - origin;
+                _distanceKey[i] = d.X * d.X + d.Y * d.Y + d.Z * d.Z;
+            }
+            SortNearestFirst(n);
+            for (int i = 0; i < n; i++)
+            {
+                _available[i] = _visible[i].TreeCount + _visible[i].RockCount;
+            }
+
+            DrawBudget.Allocate(_available, n, maxInstances, _allocated);
+            for (int i = 0; i < n; i++)
+            {
+                DrawChunk(_visible[i], origin, _allocated[i]);
+            }
+            _visible.Clear();
+        }
+
+        /// <summary>Insertion sort of the visible chunks by squared distance. The lists are short, so this is cheap.</summary>
+        private void SortNearestFirst(int n)
+        {
+            for (int i = 1; i < n; i++)
+            {
+                double key = _distanceKey[i];
+                RoadChunkStreamer.Chunk chunk = _visible[i];
+                int j = i - 1;
+                while (j >= 0 && _distanceKey[j] > key)
+                {
+                    _distanceKey[j + 1] = _distanceKey[j];
+                    _visible[j + 1] = _visible[j];
+                    j--;
+                }
+                _distanceKey[j + 1] = key;
+                _visible[j + 1] = chunk;
+            }
+        }
+
+        /// <summary>Draws up to <paramref name="allowed"/> instances of one chunk: trees first, then rocks.</summary>
+        private void DrawChunk(RoadChunkStreamer.Chunk chunk, Vector3d origin, int allowed)
+        {
+            if (allowed <= 0) return;
+            Vector3 offset = new Vector3((float)(chunk.Origin.X - origin.X), (float)(chunk.Origin.Y - origin.Y),
+                (float)(chunk.Origin.Z - origin.Z));
+            Matrix4x4 root = Matrix4x4.Translate(offset);
+            int pick = MeshPick(chunk.Index);
+
+            int trees = System.Math.Min(allowed, chunk.TreeCount);
+            if (trees > 0 && chunk.TreeVariant >= 0 && chunk.TreeVariant < _species.Length)
+            {
+                SpeciesSet set = _species[chunk.TreeVariant];
+                Mesh treeMesh = set.Meshes[pick];
+                DrawBatch(treeMesh, set.Bark, root, chunk.Trees, trees, BarkSub);
+                DrawBatch(treeMesh, set.Leaves, root, chunk.Trees, trees, FoliageSub);
+            }
+            int rocks = System.Math.Min(allowed - trees, chunk.RockCount);
+            DrawBatch(_rocks[pick], _rockMaterial, root, chunk.Rocks, rocks, BarkSub);
         }
 
         /// <summary>Picks the species for a chunk from its centre biome and a per-chunk roll.</summary>

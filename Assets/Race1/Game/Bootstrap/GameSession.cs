@@ -292,6 +292,7 @@ namespace Race1.Game
             _cameraEffects = new CameraEffects();
             _weather = new WeatherState();
             _perf = new PerformanceDirector(QualityTier.High, QualityTier.Ultra);
+            _perf.Budgets = _config.Budgets;
             _menu = new MenuController();
             _trafficView = new TrafficView(_worldRoot, VehicleCatalog.Create(VehicleCatalog.AuroraVeloce));
 
@@ -548,8 +549,8 @@ namespace Race1.Game
             // Road and world.
             _chunks.Update(s, _origin);
             _chunks.DrawRoadside(_origin);
-            _lampLights.Update(_chunks, _origin, _playerView.WorldPosition - _origin, _night01);
-            _vegetation.Draw(_chunks.Active, _origin);
+            _lampLights.Update(_chunks, _origin, _playerView.WorldPosition - _origin, _night01, _perf.LitLightLimit);
+            _vegetation.Draw(_chunks.Active, _origin, _perf.VegetationLimit);
             _playerView.Place(_road.Sample(s), _player.T, _player.HeadingError, _origin, tm, dt);
             _playerView.SetNight(_night01);
             _trafficView.Tick(_traffic.Cars, _road, _origin, _night01);

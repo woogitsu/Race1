@@ -56,11 +56,13 @@ namespace Race1.Game
         /// Places the lights for this frame. <paramref name="viewer"/> and the chunks are both relative to the
         /// floating origin. <paramref name="night01"/> is 0 in full day and 1 at full night.
         /// </summary>
-        public void Update(RoadChunkStreamer chunks, Vector3d origin, Vector3d viewer, float night01)
+        public void Update(RoadChunkStreamer chunks, Vector3d origin, Vector3d viewer, float night01, int maxLit)
         {
             bool dark = night01 > DarkThreshold;
             int n = chunks.CollectLamps(origin, ref _positions, ref _keys);
-            _budget.Update(_positions, n, viewer, dark ? _lights.Length : 0);
+            // The tier budget may allow fewer lights than the pool holds; the pool size is the hard ceiling.
+            int limit = Mathf.Max(0, Mathf.Min(maxLit, _lights.Length));
+            _budget.Update(_positions, n, viewer, dark ? limit : 0);
 
             // 1. Lamps that stay lit keep their light.
             for (int slot = 0; slot < _heldThisFrame.Length; slot++) _heldThisFrame[slot] = false;

@@ -74,14 +74,26 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
   synteza w `AmbientSynth` (Core, testy), odtwarzanie w `AmbientAudio` (Game). Nie słyszane.
 - [x] **G8. Poziomy szczegółów aut.** LOD (`LODGroup`) z uproszczoną karoserią dla dalekich aut.
   Progi w Core (`CarLod`, testy), uproszczona karoseria w `CarMeshFactory`, `LODGroup` w `CarView`. Nie oglądane.
-- [ ] **G9. Budżet wydajności.** Limity: chunki, instancje roślinności, liczba świateł, cienie.
-  Zapisane w `RaceConfig` i wymuszane przez `PerformanceDirector`.
+- [x] **G9. Budżet wydajności.** Limity: chunki, instancje roślinności, liczba świateł, cienie.
+  Zapisane w `RaceConfig` i wymuszane przez `PerformanceDirector`. Typ i sprawdzanie w Core
+  (`PerformanceBudget`, `DrawBudget`, testy); egzekucja w `VegetationStreamer`, `StreetLampLights`, `PerformanceDirector`.
 - [ ] **G10. Przegląd jakości.** Uzupełnienie `docs/STATUS.md` o listę wizualną i świadomie
   zostawione braki (bez udawania wyników renderingu).
 
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 15, cykl godzinny) — G9 zrobione. Core: `PerformanceLimits` (chunki przed autem, budowy na
+  klatkę, instancje roślinności, światła, odległość cieni; [Serializable], żeby dało się je edytować w `RaceConfig`),
+  `PerformanceBudget` (tabela domyślna zgodna z dotychczasowymi wartościami, zakresy bezpieczeństwa, wybór wiersza
+  z awaryjnym powrotem na domyślne, sprawdzenie monotoniczności) i `DrawBudget` (przydział limitu instancji od
+  najbliższych grup). Game: `RaceConfig.Budgets`; `PerformanceDirector` czyta chunki, budowy i cienie z tabeli
+  zamiast z `switch`; `VegetationStreamer.Draw` ma limit instancji i rysuje najbliższe chunki najpierw; `StreetLampLights`
+  dostaje limit świateł na klatkę, ograniczony rozmiarem puli. Pole `ChunksAheadMax` w `RaceConfig` nie jest już
+  używane, zostawiono je ze względu na zgodność. Testy: CoreTests 200/200 (11 nowych w PerformanceBudgetTests).
+  UnityCheck bez błędów. Nie zmierzono kosztu na urządzeniu: limity są ostrożnymi wartościami. Następny: G10
+  (przegląd jakości i listy braków w docs/STATUS.md).
 
 - 2026-11-09 (uruchomienie 14, cykl godzinny) — G8 zrobione. Core: `CarLod` (pełny model do 90 m, uproszczony do
   300 m, potem wycięcie; zamiana odległości na udział wysokości ekranu przy polu widzenia 70°, z funkcją odwrotną;

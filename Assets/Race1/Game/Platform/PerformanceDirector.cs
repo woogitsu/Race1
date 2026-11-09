@@ -8,6 +8,8 @@ namespace Race1.Game
     /// <summary>
     /// Connects the core QualityGovernor to the engine: render scale on the URP asset, shadow distance, MSAA,
     /// frame rate target and road draw distance. Settings change at most twice a second to avoid flicker.
+    /// The per-tier limits (chunks, builds, vegetation, lights, shadows) come from <see cref="Budgets"/>, which the
+    /// race config fills in. Each limit is sanitized before it is used.
     /// </summary>
     public sealed class PerformanceDirector
     {
@@ -26,24 +28,24 @@ namespace Race1.Game
 
         public QualityTier Tier => _governor.Tier;
 
+        /// <summary>The budget table, one row per quality tier. The race config sets it once at start-up.</summary>
+        public PerformanceLimits[] Budgets { get; set; } = PerformanceBudget.Defaults();
+
+        /// <summary>The sanitized limits of the current tier.</summary>
+        public PerformanceLimits Current => PerformanceBudget.ForTier(Budgets, _governor.Tier);
+
+        /// <summary>Tree and rock instances the vegetation may draw in one frame.</summary>
+        public int VegetationLimit => Current.MaxVegetationInstances;
+
+        /// <summary>Street lamps that may use a real light at once.</summary>
+        public int LitLightLimit => Current.MaxLitLights;
+
         /// <summary>Chunk builds allowed per frame. Lower on weak tiers so generation never causes a long frame.</summary>
-        public int BuildsPerFrame => _governor.Tier <= QualityTier.Balanced ? 1 : 2;
+        public int BuildsPerFrame => Current.BuildsPerFrame;
         public double RenderScale => _governor.RenderScale;
 
         /// <summary>Road chunks drawn ahead of the car for the current tier.</summary>
-        public int ChunksAhead
-        {
-            get
-            {
-                switch (_governor.Tier)
-                {
-                    case QualityTier.BatterySaver: return 7;
-                    case QualityTier.Balanced: return 9;
-                    case QualityTier.High: return 11;
-                    default: return 14;
-                }
-            }
-        }
+        public int ChunksAhead => Current.ChunksAhead;
 
         public void Tick(float dt, DevicePlatform device)
         {
@@ -78,7 +80,7 @@ namespace Race1.Game
             if (tier != _appliedTier)
             {
                 _appliedTier = tier;
-                QualitySettings.shadowDistance = tier == QualityTier.BatterySaver ? 60f : tier == QualityTier.Balanced ? 120f : 220f;
+                QualitySettings.shadowDistance = Current.ShadowDistanceM;
                 if (asset != null)
                 {
                     asset.msaaSampleCount = tier >= QualityTier.High ? 4 : 1;

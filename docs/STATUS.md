@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **189/189 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **200/200 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -100,7 +100,11 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
   fabrycznej, wybór opon i RESET. Ustawienia są zapisane per auto w save i używane przy starcie przejazdu.
   Nie sprawdzono w Unity: układu, przeciągania suwaków i zapisu na urządzeniu.
 - Platforma: odczyt safe area, odświeżania, baterii; termika Androida przez JNI (tylko na Androidzie).
-- Wydajność: skala renderowania URP, liczba chunków, MSAA, docelowy FPS według poziomu.
+- Wydajność: skala renderowania URP, MSAA, docelowy FPS według poziomu. Budżet na poziom
+  (`PerformanceLimits` w `RaceConfig.Budgets`, sprawdzany przez `PerformanceBudget`): chunki przed autem,
+  budowy na klatkę, instancje roślinności na klatkę (najbliższe chunki pierwsze, `DrawBudget`), liczba
+  świateł i odległość cieni. Wartości domyślne odpowiadają dotychczasowym. Nie zmierzono kosztu na urządzeniu,
+  więc limity są ostrożnymi wartościami, a nie wynikiem pomiaru.
 - Latarnie: głowy instancjonowane (świecą nocą) i pula do N prawdziwych świateł punktowych
   (`StreetLampLights`, limit `RaceConfig.MaxLitStreetLamps`, domyślnie 8) przydzielanych najbliższym
   latarniom przez `LampBudget`. Nie sprawdzono w Unity, ile to kosztuje na telefonie.
