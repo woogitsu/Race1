@@ -58,7 +58,8 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 - [x] **G1. Latarnie z prawdziwym światłem.** Dla najbliższych N latarni (limit 8) włączyć `Light`
   w nocy, reszta emisyjna. Limit w `RaceConfig` (`MaxLitStreetLamps`). Wybór w Core (`LampBudget`,
   z histerezą, testy), pula świateł w Game (`StreetLampLights`).
-- [ ] **G2. Tryb wyścigu AI w menu i w sesji.** Podpięcie `RaceDirector` z C2 do `GameSession` i menu.
+- [x] **G2. Tryb wyścigu AI w menu i w sesji.** Podpięcie `RaceDirector` z C2 do `GameSession` i menu.
+  Logika w Core (`RivalRace`, testy), tryb `AiRace` w menu i w sesji (`GameSession`, `RaceConfig`).
 - [ ] **G3. Tryb fotograficzny.** Pauza > „Photo”: swobodna kamera orbitalna, zmiana FOV i ogniskowej,
   zapis zrzutu (`ScreenCapture`) do `persistentDataPath`.
 - [ ] **G4. Garaż z tuningiem.** Suwaki sprężyn, tłumienia, przełożeń w menu, zapis do `VehicleTuningData`
@@ -77,6 +78,18 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 8, cykl godzinny) — G2 zrobione. Core: `RivalRace` składa wyścig z gracza (Id 0)
+  i rywali na siatce za startem (odstęp 12 m, pasy naprzemiennie), odlicza start (3 s, nikt się nie rusza)
+  i prowadzi rywali przez `AiRacerModel` oraz `RaceDirector`. Funkcje pasów `LaneCentre` i `LaneOf` są w Core.
+  Game: tryb `AiRace` w menu (przycisk po TRAFFIC CHALLENGE). `GameSession` tworzy rywali i ich wizualne auta,
+  podczas odliczania hamulec trzyma auto, HUD pokazuje miejsce, dystans i czas, a po mecie po 6 s wraca do menu.
+  Rywale poza strumieniowanym odcinkiem drogi są ukryci i nie są próbkowane, bo próbkowanie daleko za autem
+  cofałoby generator drogi. Ustawienia w `RaceConfig`: 3000 m, 5 rywali, 50 m/s przy tempie 1, trudność Normal.
+  Testy: CoreTests 134/134 (8 nowych w RivalRaceTests). Pomiar w testach: najszybszy rywal na 3000 m jedzie
+  łatwy 85.2 s, normalny 80.7 s, trudny 77.9 s. UnityCheck bez błędów. Nie sprawdzono w Unity: wyglądu rywali,
+  HUD, odliczania ani balansu z graczem. Ograniczenia: brak fizycznej kolizji z rywalami, wyniki nie są zapisywane.
+  Następny: G3 (tryb fotograficzny).
 
 - 2026-11-09 (uruchomienie 7, cykl godzinny) — G1 zrobione. `LampBudget` (Core/World): wybiera najbliższe N
   latarni; lampa już zapalona zostaje, dopóki niezapalona nie jest o 15% bliżej (histerezja), więc światła nie

@@ -30,6 +30,17 @@ namespace Race1.Game
         [Header("Vehicle")]
         public float PhysicsStepHint = 1f / 600f;
 
+        [Header("AI race")]
+        [Tooltip("Point-to-point race length from the grid, in metres.")]
+        public double RaceLengthM = 3000.0;
+        [Tooltip("AI rivals in the race, 0 to 8.")]
+        public int RivalCount = 5;
+        [Tooltip("Cruising speed of a rival at pace 1, in m/s. The difficulty scales it.")]
+        public double RivalReferenceSpeedMs = 50.0;
+        [Tooltip("Distance between grid slots behind the start, in metres.")]
+        public double RivalGridSpacing = 12.0;
+        public AiDifficulty RivalDifficulty = AiDifficulty.Normal;
+
         public RoadSettings ToRoadSettings()
         {
             return new RoadSettings

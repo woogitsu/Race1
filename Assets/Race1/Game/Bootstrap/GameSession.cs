@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Race1.Core;
 using UnityEngine;
@@ -25,6 +26,10 @@ namespace Race1.Game
         private const int DayOfYear = 172;
         private const double TimeAttackLength = 3000.0;
         private const float TimeAttackRestartDelay = 4.0f;
+        private const double RaceStartS = 100.0;           // grid start on the route; rivals sit behind it
+        private const double RaceCountdownSeconds = 3.0;
+        private const float RaceResultSeconds = 6.0f;      // standings stay on screen before the menu returns
+        private const double MaxGridBackM = 96.0;          // rivals never start more than this far behind the start
         private const double Turbidity = 3.0;
 
         public static GameSession Instance { get; private set; }
@@ -80,6 +85,10 @@ namespace Race1.Game
         private TrafficChallengeScorer _scorer;
         private TimeAttackTimer _timer;
         private GameMode _mode;
+        private RivalRace _rivalRace;
+        private double _raceOriginS;
+        private float _raceEndTimer = -1f;
+        private readonly List<CarView> _rivalViews = new List<CarView>();
         private AppState _state = AppState.Menu;
         private Vector3d _origin;
         private double _hour = 12.0;
@@ -314,11 +323,13 @@ namespace Race1.Game
             AssistSettings assists = opts.AssistIndex == 0 ? AssistSettings.Arcade
                 : opts.AssistIndex == 1 ? AssistSettings.Sport : AssistSettings.Simulation;
 
-            double startS = 0.0;
+            // The AI race always starts from the grid, never from a saved route.
+            bool isRace = mode == GameMode.AiRace;
+            double startS = isRace ? RaceStartS : 0.0;
             double startT = _road.Sample(0).HalfWidth * 0.5;
-            if (continueSave && SaveMigrator.TryParseDouble(_save.RouteS, out double savedS)) startS = savedS;
-            if (continueSave && SaveMigrator.TryParseDouble(_save.RouteT, out double savedT)) startT = savedT;
-            double startSpeed = mode == GameMode.TimeAttack ? 0.0 : RunStartSpeed;
+            if (!isRace && continueSave && SaveMigrator.TryParseDouble(_save.RouteS, out double savedS)) startS = savedS;
+            if (!isRace && continueSave && SaveMigrator.TryParseDouble(_save.RouteT, out double savedT)) startT = savedT;
+            double startSpeed = mode == GameMode.TimeAttack || isRace ? 0.0 : RunStartSpeed;
 
             if (_playerView != null) Destroy(_playerView.gameObject);
             _playerView = CarView.Create(_worldRoot, _spec, MenuOptions.PaintColours[opts.PaintIndex], "Player");
@@ -329,7 +340,7 @@ namespace Race1.Game
 
             _traffic = new TrafficSimulation(_road, _roadSettings.Seed, _config.MaxTrafficCars)
             {
-                Enabled = opts.TrafficOn && mode != GameMode.TimeAttack,
+                Enabled = opts.TrafficOn && mode != GameMode.TimeAttack && !isRace,
             };
             _trafficView.Clear();
             _scorer = new TrafficChallengeScorer();
@@ -338,6 +349,8 @@ namespace Race1.Game
             {
                 _timer.Begin(startS, TimeAttackLength, 3, _save.Progress.BestTimeAttackSeconds);
             }
+
+            if (isRace) BeginRace(startS);
 
             RoadSample start = _road.Sample(startS);
             _origin = start.PointAt(startT);
@@ -416,7 +429,14 @@ namespace Race1.Game
             }
 
             _player.FrictionScale = _weather.FrictionScale;
-            _player.Advance(dt, frame.Vehicle);
+            // The AI race holds the car on the brakes during the grid countdown.
+            VehicleInput input = frame.Vehicle;
+            if (_mode == GameMode.AiRace && _rivalRace != null && !_rivalRace.Started)
+            {
+                input.Throttle = 0.0;
+                input.Brake = 1.0;
+            }
+            _player.Advance(dt, input);
             _weather.Update(dt);
             VehicleTelemetry tm = _player.Telemetry;
             double s = _player.S;
@@ -464,6 +484,8 @@ namespace Race1.Game
             {
                 _scorer.OnFrame(dt, frame.Vehicle.Steer, tm.SpeedMs * dt);
             }
+
+            if (_mode == GameMode.AiRace && _rivalRace != null && TickRace(dt, s, tm)) return;
 
             // Road and world.
             _chunks.Update(s, _origin);
@@ -520,6 +542,92 @@ namespace Race1.Game
             _hud.Tick(dt, BuildHudState(tm));
         }
 
+        /// <summary>Creates the rivals for a new race: the core race, and one visual car per rival.</summary>
+        private void BeginRace(double originS)
+        {
+            _raceOriginS = originS;
+            int lanes = Math.Max(1, _road.Sample(originS).Lanes);
+            int rivals = Math.Min(8, Math.Max(0, _config.RivalCount));
+            double spacing = Math.Max(1.0, Math.Min(_config.RivalGridSpacing, MaxGridBackM / Math.Max(1, rivals)));
+            _rivalRace = new RivalRace(Math.Max(100.0, _config.RaceLengthM), rivals, lanes, _config.RivalDifficulty,
+                Math.Max(1.0, _config.RivalReferenceSpeedMs), spacing, RaceCountdownSeconds);
+
+            foreach (CarView view in _rivalViews)
+            {
+                if (view != null) Destroy(view.gameObject);
+            }
+            _rivalViews.Clear();
+            for (int i = 0; i < _rivalRace.Rivals.Count; i++)
+            {
+                VehicleSpec spec = VehicleCatalog.Create(VehicleCatalog.Ids[(i + 1) % VehicleCatalog.Ids.Count]);
+                var paint = MenuOptions.PaintColours[(i + 2) % MenuOptions.PaintColours.Length];
+                _rivalViews.Add(CarView.Create(_worldRoot, spec, paint, "Rival " + (i + 1)));
+            }
+            _raceEndTimer = -1f;
+        }
+
+        /// <summary>
+        /// One frame of the AI race: the player's place on the route goes to the core race, rivals are moved and
+        /// placed on their lanes. Returns true when the result has been shown and the game is back in the menu.
+        /// </summary>
+        private bool TickRace(float dt, double s, VehicleTelemetry tm)
+        {
+            int lanes = _rivalRace.Lanes;
+            double halfWidth = _road.Sample(s).HalfWidth;
+            _rivalRace.SetPlayer(s - _raceOriginS, tm.SpeedMs, RivalRace.LaneOf(_player.T, lanes, halfWidth));
+            _rivalRace.Update(dt);
+
+            // Only rivals inside the streamed road are shown and sampled. Sampling far behind the car would rewind
+            // the road generator every frame, and far ahead there is no road mesh yet.
+            double playerProgress = s - _raceOriginS;
+            double viewBehind = _chunks.ChunksBehind * RoadMeshBuilder.ChunkLength;
+            double viewAhead = Math.Max(0, _chunks.ChunksAhead - 1) * RoadMeshBuilder.ChunkLength;
+            for (int i = 0; i < _rivalViews.Count; i++)
+            {
+                RaceEntrant rival = _rivalRace.Rivals[i];
+                GameObject go = _rivalViews[i].gameObject;
+                double gap = rival.Progress - playerProgress;
+                bool inView = gap >= -viewBehind && gap <= viewAhead;
+                if (go.activeSelf != inView) go.SetActive(inView);
+                if (!inView) continue;
+
+                RoadSample sample = _road.Sample(_raceOriginS + rival.Progress);
+                double t = RivalRace.LaneCentre(rival.Lane, lanes, sample.HalfWidth);
+                _rivalViews[i].Place(sample, t, 0.0, _origin, null, dt);
+                _rivalViews[i].SetNight(_night01);
+            }
+
+            if (!_rivalRace.IsOver) return false;
+            if (_raceEndTimer < 0f) _raceEndTimer = RaceResultSeconds;
+            _raceEndTimer -= dt;
+            if (_raceEndTimer > 0f) return false;
+
+            _raceEndTimer = -1f;
+            SaveNow();
+            EnterMenu();
+            return true;
+        }
+
+        private string RaceModeLine()
+        {
+            RaceEntrant player = _rivalRace.Player;
+            int count = _rivalRace.Rivals.Count + 1;
+            if (player.Finished)
+            {
+                return $"FINISH  P{player.Place}/{count}  {player.FinishTime:F2} s";
+            }
+            double toGo = Math.Max(0.0, _rivalRace.Director.RaceLength - player.Progress);
+            return $"AI RACE  P{player.Place}/{count}  {_rivalRace.Director.Elapsed:F1} s  {toGo:F0} m to go";
+        }
+
+        /// <summary>Countdown digits before the start, then GO for a second. Other times keep the normal status.</summary>
+        private string RaceStatus(string fallback)
+        {
+            if (!_rivalRace.Started) return ((int)Math.Ceiling(_rivalRace.Countdown)).ToString();
+            if (_rivalRace.Director.Elapsed < 1.0) return "GO";
+            return fallback;
+        }
+
         private HudState BuildHudState(VehicleTelemetry tm)
         {
             string modeLine;
@@ -531,6 +639,9 @@ namespace Race1.Game
                 case GameMode.TrafficChallenge:
                     modeLine = $"TRAFFIC CHALLENGE  {_scorer.FinalScore}  x{_scorer.Multiplier}";
                     break;
+                case GameMode.AiRace:
+                    modeLine = _rivalRace != null ? RaceModeLine() : "AI RACE";
+                    break;
                 case GameMode.FreeRide:
                     modeLine = "FREE RIDE";
                     break;
@@ -541,6 +652,7 @@ namespace Race1.Game
 
             string status = tm.Damage > 0.5 ? $"damage {tm.Damage:F0}" : string.Empty;
             if (tm.EspActive) status = "stability";
+            if (_mode == GameMode.AiRace && _rivalRace != null) status = RaceStatus(status);
             return new HudState
             {
                 SpeedKmh = tm.SpeedKmh,

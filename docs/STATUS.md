@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **126/126 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **134/134 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -50,7 +50,7 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
   tarcia i chłodzenia powietrzem; oba zmniejszają przyczepność. Stałe są dobrane z rozsądku, nie
   skalibrowane na danych z opon. Testy w TyreConditionTests.
 - Trzy samochody o różnym charakterze (`VehicleCatalog`), oryginalne nazwy.
-- Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), testy w CoreTests.
+- Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), wyścig z rywalami na siatce z odliczaniem i trzema poziomami trudności (`RivalRace`). Testy w CoreTests (RaceDirectorTests, RivalRaceTests).
 - Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Renderowanie tuneli i filarów mostów jeszcze nie istnieje. Udział jest wysoki w alpejskim terenie i wymaga strojenia.
 - Latarnie nocą: wybór najbliższych N latarni z histerezą (`LampBudget`), testy w LampBudgetTests.
 - Ruch AI: unik na wielopasmowych drogach, bezpieczna luka przy zmianie pasa, testy scenariuszy z hamującym graczem (`TrafficEvasionTests`). Ograniczenie: na dwupasmowej drodze auto nie ma gdzie uciec, więc gracz jadący bez hamowania w wolniejsze auto uderzy.
@@ -72,6 +72,8 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Samochód: proceduralne nadwozie (superellipsa, przeszklenie, światła), koła z oponą i felgą,
   przechyły i zanurzenie z zawieszenia, obrót kół, światła hamowania.
 - Ruch AI jako osobne wizualne samochody.
+- Tryb AI Race w menu: siatka pięciu rywali za startem, odliczanie z hamulcem, linia HUD z miejscem
+  i dystansem, powrót do menu po mecie. Rywale poza strumieniowanym odcinkiem drogi są ukryci.
 - Kamery i przełączanie widoków; HUD (prędkość, bieg, obrotomierz, asysty, tryb, pogoda, flash kolizji).
 - Kontrolki dotykowe (pady, gaz, hamulec, ręczny, biegi, widok, pauza) oraz pad, klawiatura i przechył.
 - Silnik audio przez `OnAudioFilterRead` z buforem przydzielonym raz.
@@ -103,7 +105,8 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - Brak dedykowanego shadera asfaltu z połyskiem; używany jest URP Lit z teksturą proceduralną.
 
 ### Rozgrywka
-- **Brak trybu AI Racing** (wyścig z przeciwnikami o pozycję) i **Photo Mode**.
+- **Brak Photo Mode.** Tryb AI Race jest w menu, ale jego balans nie został zmierzony: w testach najszybszy
+  rywal na 3000 m jedzie 78–85 s w zależności od trudności, a gracz nie był mierzony.
 - **Free Ride** to Endless Drive z wyborem pogody i pory dnia; brak suwaków trudności i gęstości ruchu w menu.
 - **Strojenie auta w garażu nie jest wystawione w UI** (sprężyny, przełożenia, zawieszenie). Model
   to przyjmuje (`VehicleSpec`, `VehicleTuningData`), ale nie ma ekranów.
@@ -111,7 +114,8 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - **Ruch AI nie gwarantuje braku kolizji z graczem:** w testach 2-minutowych bez hamowania było
   7 kontaktów. Samochody zmieniające pas nie przewidują wszystkich sytuacji.
 - **Brak uszkodzeń wizualnych** (wgnieceń). Uszkodzenie jest liczbą w HUD.
-- Pozycje w wyścigu i zapis wyników wyścigów z innymi autami nie są zaimplementowane.
+- Wyniki wyścigu AI (czasy, miejsca) nie są zapisywane. Rywale nie zderzają się fizycznie z graczem:
+  jeśli dzielą pas, mogą przenikać przez auto gracza. Wyścig nie był uruchomiony w Unity.
 
 ### Fizyka
 - **Sprzęgło jest uproszczone**: zablokowane powyżej obrotów jałowych, bez poślizgu sprzęgła.

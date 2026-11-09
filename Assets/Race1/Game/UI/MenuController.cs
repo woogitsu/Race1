@@ -11,6 +11,7 @@ namespace Race1.Game
         FreeRide = 1,
         TimeAttack = 2,
         TrafficChallenge = 3,
+        AiRace = 4,
     }
 
     public enum MenuAction
@@ -88,7 +89,8 @@ namespace Race1.Game
             MenuButton(_mainPanel, new RectN(0.05, y, 0.9, 0.08), "ENDLESS DRIVE", () => { Options.Mode = GameMode.EndlessDrive; Chosen?.Invoke(MenuAction.StartRun); }); y += 0.095f;
             MenuButton(_mainPanel, new RectN(0.05, y, 0.9, 0.08), "FREE RIDE", () => { Options.Mode = GameMode.FreeRide; Chosen?.Invoke(MenuAction.StartRun); }); y += 0.095f;
             MenuButton(_mainPanel, new RectN(0.05, y, 0.9, 0.08), "TIME ATTACK", () => { Options.Mode = GameMode.TimeAttack; Chosen?.Invoke(MenuAction.StartRun); }); y += 0.095f;
-            MenuButton(_mainPanel, new RectN(0.05, y, 0.9, 0.08), "TRAFFIC CHALLENGE", () => { Options.Mode = GameMode.TrafficChallenge; Chosen?.Invoke(MenuAction.StartRun); });
+            MenuButton(_mainPanel, new RectN(0.05, y, 0.9, 0.08), "TRAFFIC CHALLENGE", () => { Options.Mode = GameMode.TrafficChallenge; Chosen?.Invoke(MenuAction.StartRun); }); y += 0.095f;
+            MenuButton(_mainPanel, new RectN(0.05, y, 0.9, 0.08), "AI RACE", () => { Options.Mode = GameMode.AiRace; Chosen?.Invoke(MenuAction.StartRun); });
 
             var garage = Panel(rootRt, new RectN(0.6, 0.08, 0.34, 0.84), new Color(0.04f, 0.05f, 0.07f, 0.6f));
             _carLine = TextLabel(garage, new RectN(0.05, 0.03, 0.9, 0.07), "", 44, TextAnchor.MiddleLeft);
