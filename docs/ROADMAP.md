@@ -77,12 +77,39 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 - [x] **G9. Budżet wydajności.** Limity: chunki, instancje roślinności, liczba świateł, cienie.
   Zapisane w `RaceConfig` i wymuszane przez `PerformanceDirector`. Typ i sprawdzanie w Core
   (`PerformanceBudget`, `DrawBudget`, testy); egzekucja w `VegetationStreamer`, `StreetLampLights`, `PerformanceDirector`.
-- [ ] **G10. Przegląd jakości.** Uzupełnienie `docs/STATUS.md` o listę wizualną i świadomie
-  zostawione braki (bez udawania wyników renderingu).
+- [x] **G10. Przegląd jakości.** Uzupełnienie `docs/STATUS.md` o listę wizualną i świadomie
+  zostawione braki (bez udawania wyników renderingu). Lista wizualna i tabela braków są w STATUS.
+
+### Rozszerzenie po G10 (propozycje; właściciel projektu może je przestawić)
+
+Kolejka G1–G10 jest zrobiona. Poniższe punkty wynikają z listy „Świadomie zostawione braki” w `docs/STATUS.md`
+i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je w kolejności.
+
+- [ ] **H1. Śnieg na nawierzchni i terenie.** Core: `SnowCover.Amount(snow01)`, monotoniczne, zero bez śniegu,
+  z ograniczoną szybkością narastania w czasie. Game: podpięcie `TerrainMaterialFactory.Snow` do chunków, gdy
+  pokrycie przekracza próg. Test: monotoniczność, zakres 0–1, ograniczenie szybkości.
+- [ ] **H2. Krople na szybie w deszczu.** Core: `WindscreenWetness`, rośnie z deszczem, maleje z prędkością
+  (wycieraczki), zakres 0–1. Game: nakładka na widok z kokpitu. Test: wzrost z deszczem, spadek z prędkością.
+- [ ] **H3. Ślady opon na poślizgu.** Core: `SkidMarkModel.Intensity(squealLevel)` oraz odstęp śladów wzdłuż
+  drogi. Game: pierścieniowy bufor śladów z limitem z budżetu (G9). Test: intensywność monotoniczna, bufor nie
+  przekracza limitu.
+- [ ] **H4. Refleksy mokrego asfaltu.** Core: `WetReflection.Strength(wetness, sunElevation, night01)`, zero na
+  suchym asfalcie, najmocniejsze przy niskim słońcu i mokrej nawierzchni. Game: parametr shadera drogi.
+  Test: zero na suchym, zakres 0–1, monotoniczność z mokrością.
 
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 16, cykl godzinny) — G10 zrobione: przegląd jakości w `docs/STATUS.md`. Dodano listę
+  wizualną (każdy element: plik w kodzie, stan „napisane / nieobejrzane / brak”, co sprawdzić na urządzeniu),
+  sekcję „Świadomie zostawione braki” (powód i warunek zamknięcia) oraz datę przeglądu. Sprawdzono każdą nazwę
+  klasy w tabeli, aby nie wpisać czegoś, czego nie ma. Poprawiono dwa nieaktualne wpisy: wersję Unity (projekt
+  jest na 6000.0.64f1, a nie 6.0.23) i zdanie „brak cząsteczek” (deszcz i śnieg mają cząsteczki). Dopisano brak,
+  którego wcześniej nie było w dokumencie: materiał śniegu istnieje, ale nie jest podpięty do terenu. Wynik testów: CoreTests 200/200, UnityCheck bez
+  błędów. Blokady: brak Unity Editora i urządzenia, więc nic z listy wizualnej nie zostało obejrzane. Kolejka
+  G1–G10 jest zrobiona. Dopisano propozycje H1–H4 z listy braków, do wykonania w kolejnych przebiegach.
+  Następny: H1 (śnieg na nawierzchni).
 
 - 2026-11-09 (uruchomienie 15, cykl godzinny) — G9 zrobione. Core: `PerformanceLimits` (chunki przed autem, budowy na
   klatkę, instancje roślinności, światła, odległość cieni; [Serializable], żeby dało się je edytować w `RaceConfig`),

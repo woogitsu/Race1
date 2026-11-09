@@ -3,6 +3,9 @@
 Ten dokument rozdziela trzy rzeczy: **zaimplementowane**, **zweryfikowane** i **brakujące lub
 uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomione.
 
+Ostatni przegląd jakości (G10): 2026-11-09. Wszystko, co dotyczy grafiki i dźwięku, jest **napisane i
+skompilowane, ale nieobejrzane ani nieusłyszane** w Unity. Nie ma w tym środowisku renderingu ani Unity Editora.
+
 ## Co zostało zweryfikowane i jak
 
 | Obszar | Weryfikacja | Wynik |
@@ -35,6 +38,41 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 | Droga, odtworzenie po cofnięciu | identyczne próbki (bit w bit) | deterministyczne |
 | Ruch drogowy, 2 min, 12 aut | brak nakładania się aut w tym samym pasie; 7 kontaktów z graczem (gracz bez hamowania) | patrz ograniczenia |
 | Generacja terenu, koszt | 700 wywołań wysokości terenu (jeden chunk, dalekie pierścienie): 1,3 ms; 10 km drogi: 20 ms | patrz ryzyka |
+
+## Lista wizualna: co powinno być widać i czy kod istnieje
+
+Stan w każdym wierszu dotyczy tego, co zostało zrobione w repozytorium. Żadna pozycja nie jest opisem wyniku
+renderingu. „Napisane” znaczy: jest kod, kompiluje się w `tools/UnityCheck`, a część logiki ma testy w Core.
+„Nieobejrzane” znaczy: nikt nie widział tego w grze.
+
+| Element | Gdzie w kodzie | Stan | Co sprawdzić na urządzeniu |
+|---|---|---|---|
+| Droga i asfalt, oznaczenia pasów | `RoadMeshBuilder`, `RoadMaterialFactory` | napisane, nieobejrzane | ciągłość między chunkami, brak skoków wysokości, oznaczenia |
+| Pobocza, bariery, słupki, kilometrówki | `RoadsideProps`, `RoadChunkStreamer` | napisane, nieobejrzane | rytm słupków, kilometrówki co 1000 m |
+| Latarnie (głowy i do 8 świateł nocą) | `RoadsideProps`, `StreetLampLights`, `LampBudget` | napisane, nieobejrzane | wygląd nocą, przeskoki świateł przy jeździe |
+| Teren i 7 biomów, tekstury proceduralne | `TerrainField`, `TerrainMaterialFactory`, `TextureUtil` | napisane, nieobejrzane | przejścia między biomami, szwy tekstur |
+| Drzewa i skały | `VegetationStreamer`, `ProceduralMeshes`, `TreeTextures` | napisane, nieobejrzane | gęstość, limit instancji przy szybkiej jeździe |
+| Woda przybrzeżna i piana | `CoastWaterBuilder`, `Race1/Water` | napisane, nieobejrzane, rzadka | czy shader się ładuje w buildzie, czy woda nie zalewa drogi |
+| Filary mostów, obudowa tuneli | `StructureProps` | napisane, nieobejrzane | położenie względem asfaltu, nawinięcie z wnętrza tunelu |
+| Niebo, słońce, gwiazdy, chmury, zachód | `Race1/Sky`, `SkyModel`, `Atmosphere`, `GameSession.UpdateSky` | napisane, nieobejrzane | kolor w złotej godzinie, gwiazdy w nocy |
+| Deszcz i śnieg (cząsteczki), mgła | `WeatherVisuals`, `WeatherState` | napisane, nieobejrzane | gęstość cząsteczek, widoczność w mgle |
+| Śnieg na nawierzchni i terenie | `TerrainMaterialFactory.Snow` | **brak podpięcia**: materiał jest budowany, nigdzie nie używany | — |
+| Mokra nawierzchnia | `RoadMaterialFactory.SetWetness` | napisane, nieobejrzane | ciemniejszy asfalt, bez refleksów |
+| Post-processing (bloom, tonemapping, winieta, ziarno) | `PostProcessingController` | napisane, nieobejrzane | czy nie przepala się noc i nie ciemnieje dzień |
+| Odbicia otoczenia | `ReflectionProbeRig` | napisane, nieobejrzane | czy sonda nie zostawia artefaktów na karoserii |
+| Samochód: karoseria, szkło, koła, paint | `CarMeshFactory`, `CarView`, `CarPaint` | napisane, nieobejrzane | kształt, szkło, błysk lakieru |
+| Poziomy szczegółów aut | `CarLod`, `LODGroup` w `CarView` | napisane, nieobejrzane | przełączanie 90 m i 300 m, czy reflektory wyciętych aut nie świecą |
+| Światła aut (reflektory, tylne, hamowanie) | `CarLights` | napisane, nieobejrzane | światło nocą, czerwień przy hamowaniu |
+| Ruch uliczny i rywale w wyścigu | `TrafficView`, `CarView`, `RivalRace` | napisane, nieobejrzane | brak nakładania się aut w tym samym pasie |
+| Kamery (chase, bumper, hood, cockpit, cinematic) | `CameraDirector`, `CameraEffects` | napisane, nieobejrzane | przeskoki przy zmianie widoku, wstrząs, kick FOV |
+| Tryb foto | `PhotoMode`, `PhotoOrbit`, panel w `MenuController` | napisane, nieobejrzane | kierunek przeciągania, zapis zrzutu, układ przycisków |
+| HUD (prędkość, bieg, asysty, linia wyścigu, odliczanie) | `HudController` | napisane, nieobejrzane | czytelność na Foldzie w obu stanach |
+| Menu, garaż, panel TUNING, pauza | `MenuController` | napisane, nieobejrzane | układ w poziomie, przeciąganie suwaków |
+| Sterowanie dotykowe | `OnScreenControls`, `PlayerInputReader` | napisane, nieobejrzane | pady, przyciski, martwa strefa |
+| Ślady opon, dym, iskry, pył, rozpryski | — | **brak** | — |
+| Krople na szybie | — | **brak** | — |
+| Uszkodzenia wizualne (wgniecenia) | — | **brak**, uszkodzenie to liczba w HUD | — |
+| Dźwięk: silnik, wiatr, pisk opon, deszcz | `EngineSynth`, `AmbientSynth`, `AmbientAudio` | napisane, **nieusłyszane** | poziomy, barwa, czy pisk nie jest zbyt ostry |
 
 ## Zaimplementowane funkcje
 
@@ -133,8 +171,11 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
   nie ma jej wcale. Biom Coast zajmuje w świecie ok. 0,2–0,5 % powierzchni, więc to decyzja o świecie, nie błąd
   kodu. Shader `Race1/Water` nie był kompilowany ani oglądany. Nie sprawdzono, czy woda nie zalewa pobocza,
   gdy droga biegnie poniżej 0 m.
-- **Brak deszczu i kropli na szybie, rozprysków, cząsteczek.** Pogoda wpływa na przyczepność,
-  mgłę, kolor nieba i nasycenie nawierzchni, ale nie na efekty cząsteczkowe.
+- **Efekty pogodowe są ograniczone.** Cząsteczki deszczu i śniegu istnieją (`WeatherVisuals`), ale nie
+  ma kropli na szybie, rozprysków ani śladów opon. Pogoda wpływa też na przyczepność, mgłę, kolor nieba
+  i nasycenie nawierzchni.
+- **Śnieg nie leży na terenie.** Materiał `TerrainMaterialFactory.Snow` jest budowany, ale nigdzie nie
+  przypisany. Śnieg w grze to tylko cząsteczki.
 - **Brak refleksów mokrego asfaltu** (SSR/planar); mokra nawierzchnia to niższa przyczepność i ciemniejszy kolor.
 - Brak dedykowanego shadera asfaltu z połyskiem; używany jest URP Lit z teksturą proceduralną.
 
@@ -185,7 +226,8 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 - Pliki `.meta` nie są w repozytorium; Unity utworzy je przy pierwszym imporcie. Zalecane jest
   dodanie ich do repozytorium po pierwszym otwarciu, żeby GUID-y były stabilne.
 - Ustawienie *Active Input Handling = Both* trzeba wykonać ręcznie (wymagane przez kod wejścia).
-- Pakiety w `Packages/manifest.json` mają wersje z linii Unity 6; nie były testowane z Unity 6.0.23.
+- Pakiety w `Packages/manifest.json` mają wersje z linii Unity 6; nie były testowane. Projekt jest
+  zapisany na wersji edytora `6000.0.64f1` (`ProjectSettings/ProjectVersion.txt`).
 - Brak podpisu release: budowa używa domyślnego klucza debug. Do Google Play potrzebny jest własny keystore.
 
 ### Sprawdzenie warstwy Unity (co dokładnie zostało zrobione)
@@ -199,6 +241,24 @@ Podczas tej kontroli wykryto i naprawiono realne błędy: zduplikowana nazwa `Di
 (koliza z `UnityEngine.DisplayInfo`), literały `double` w `new Color(...)`, brak `using`
 dla `GraphicsSettings`, właściwość `Path` zasłaniająca `System.IO.Path` oraz metody UI
 zasłaniające typy `Text` i `Button`.
+
+## Świadomie zostawione braki
+
+To są braki odłożone celowo. Każdy ma powód i warunek, który by go zamknął. Nie są to błędy, o których zapomniano.
+
+| Brak | Dlaczego zostawiony | Co by go zamknęło |
+|---|---|---|
+| Licencjonowane lub autorskie modele aut, wnętrze, PBR | Nie ma zasobów w repozytorium ani licencji; wymagania zakazują kopiowania cudzych zasobów | Autorskie modele od artysty albo zakupiony zasób z licencją |
+| Ślady opon, dym, iskry, pył, rozpryski, krople na szybie | Efekty cząsteczkowe kosztują klatkę na telefonie, a wydajności nie zmierzono | Pomiar w profilerze na urządzeniu, potem ostrożne efekty w ramach budżetu z G9 |
+| Refleksy mokrego asfaltu (SSR albo planar) | Koszt renderingu, którego nie da się sprawdzić bez urządzenia | Planarne odbicie na jednym odcinku albo tańszy odblask w shaderze drogi |
+| Śnieg leżący na terenie | Materiał istnieje, ale wygląd i koszt nie są rozstrzygnięte | Podpięcie `TerrainMaterialFactory.Snow` do pogody śnieżnej po przeglądzie wyglądu |
+| Częstość wybrzeża w świecie (woda jest rzadka) | To decyzja o świecie, nie o kodzie; zmiana wpływa na całą generację | Decyzja właściciela projektu: więcej biomu Coast albo osobne odcinki nadmorskie |
+| Kalibracja: stałe opon, poziomy dźwięku, progi LOD, limity budżetu | Brak danych z opon i brak pomiaru na urządzeniu | Testy na urządzeniu i pomiary wzorcowe |
+| Rywale bez fizycznej kolizji z graczem | Świadome uproszczenie: wyścig opiera się na odstępie IDM | Model kolizji z odrzutem, jeśli wyścig tego wymaga |
+| Kontakty ruchu z graczem bez hamowania (7 w 2 min) | Na dwupasmowej drodze nie ma miejsca na unik | Dodatkowe pasy albo mocniejszy unik |
+| Zapis wyników wyścigów AI i powtórki | Poza zakresem tego etapu; ROADMAP ich nie wymaga | Rozszerzenie zapisu z migracją wersji |
+| Filtry i zapis zdjęć do galerii w trybie foto | Poza zakresem; zrzut zostaje w `persistentDataPath` | Osobny punkt roadmapy |
+| Dźwięk przestrzenny i nagrania | Syntezator jest celowy, a nagrań brak | Nagrania od artysty albo kalibracja syntezatora |
 
 ## Następne kroki (w kolejności)
 
