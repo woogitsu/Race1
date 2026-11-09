@@ -264,7 +264,19 @@ namespace Race1.Game
             _chunks = new RoadChunkStreamer(_road, _terrain, _biomes, _worldRoot, _roadMats, _terrainMats,
                 _railMat, _postMat, _lampMat, _vegetation, seed);
             _chunks.BuildsPerFrame = _config.BuildsPerFrame;
+            _chunks.WaterMaterial = CreateWaterMaterial();
             _lampLights = new StreetLampLights(_worldRoot, _config.MaxLitStreetLamps);
+        }
+
+        /// <summary>
+        /// Sea surface material. Uses the Race1/Water shader when it is in the build. Otherwise falls back to an opaque
+        /// blue-green surface, so the sea is still visible.
+        /// </summary>
+        private static Material CreateWaterMaterial()
+        {
+            Shader water = Shader.Find("Race1/Water");
+            if (water != null) return new Material(water) { name = "CoastWater" };
+            return RenderMaterials.Create(new Color(0.05f, 0.2f, 0.28f), 0f, 0.9f, null, true);
         }
 
         private void CreateViews()

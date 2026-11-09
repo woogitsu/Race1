@@ -15,7 +15,7 @@ namespace Race1.Game
         public const int RingCount = 21;
 
         /// <summary>Lateral ring offsets for one sample. Road rings: index 7..13 (from -E to +E).</summary>
-        private static void RingOffsets(double halfWidth, double edge, double[] t)
+        internal static void RingOffsets(double halfWidth, double edge, double[] t)
         {
             double h = halfWidth;
             t[0] = -(edge + 250.0);
@@ -50,7 +50,7 @@ namespace Race1.Game
             return road.GetSample(i0).Position;
         }
 
-        private static long IndexStart(RoadTrack road, long chunk)
+        internal static long IndexStart(RoadTrack road, long chunk)
         {
             return (long)System.Math.Round(chunk * ChunkLength / road.SampleSpacing);
         }

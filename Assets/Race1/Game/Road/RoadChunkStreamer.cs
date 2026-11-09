@@ -32,6 +32,9 @@ namespace Race1.Game
             public int PostCount;
             public Matrix4x4[] Lamps;
             public int LampCount;
+            public GameObject Water;
+            public MeshFilter WaterFilter;
+            public MeshRenderer WaterRenderer;
         }
 
         private const int MaxPerDraw = 1023;
@@ -83,6 +86,9 @@ namespace Race1.Game
         public int ChunksBehind = 2;
         public int BuildsPerFrame = 2;
         public double BuildBudgetMs = 6.0;
+
+        /// <summary>Material for the coast sea surface. When null, no water is built.</summary>
+        public Material WaterMaterial { get; set; }
 
         public void Update(double carS, Vector3d origin)
         {
@@ -218,6 +224,21 @@ namespace Race1.Game
             {
                 chunk.Rail.SetActive(false);
             }
+            // Coast water: a sea surface where the coast biome dominates and the ground lies below sea level.
+            Mesh water = WaterMaterial != null ? CoastWaterBuilder.Build(_road, _terrain, _biomes, k, data.Origin) : null;
+            if (water != null)
+            {
+                if (chunk.Water == null) CreateWater(chunk);
+                if (chunk.WaterFilter.sharedMesh != null) Object.Destroy(chunk.WaterFilter.sharedMesh);
+                chunk.WaterFilter.sharedMesh = water;
+                chunk.WaterRenderer.sharedMaterial = WaterMaterial;
+                chunk.Water.SetActive(true);
+            }
+            else if (chunk.Water != null)
+            {
+                chunk.Water.SetActive(false);
+            }
+
             chunk.Posts = side.Posts;
             chunk.PostCount = side.PostCount;
             if (chunk.Lamps == null || chunk.Lamps.Length < side.LampCount) chunk.Lamps = new Matrix4x4[side.LampCount];
@@ -254,6 +275,17 @@ namespace Race1.Game
             chunk.RailFilter = rail.AddComponent<MeshFilter>();
             chunk.RailRenderer = rail.AddComponent<MeshRenderer>();
             chunk.RailRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        }
+
+        private static void CreateWater(Chunk chunk)
+        {
+            var water = new GameObject("CoastWater");
+            water.transform.SetParent(chunk.Go.transform, false);
+            chunk.Water = water;
+            chunk.WaterFilter = water.AddComponent<MeshFilter>();
+            chunk.WaterRenderer = water.AddComponent<MeshRenderer>();
+            chunk.WaterRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            chunk.WaterRenderer.receiveShadows = false;
         }
 
         private void Recycle(Chunk c)

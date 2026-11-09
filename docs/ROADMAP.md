@@ -64,8 +64,9 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
   zapis zrzutu (`ScreenCapture`) do `persistentDataPath`.
 - [x] **G4. Garaż z tuningiem.** Suwaki sprężyn, tłumienia, przełożeń w menu, zapis do `VehicleTuningData`
   (po C1). Logika w Core (`TuningControls`, `VehicleTuningStore`, testy), panel TUNING w garażu w Game.
-- [ ] **G5. Woda na wybrzeżu.** Płaszczyzna wody poniżej poziomu morza w biomie Coast, prosty shader
-  z odbiciem Fresnela, pianka na linii brzegu.
+- [x] **G5. Woda na wybrzeżu.** Płaszczyzna wody poniżej poziomu morza w biomie Coast, prosty shader
+  z odbiciem Fresnela, pianka na linii brzegu. Logika w Core (`Shoreline`, testy), siatka per chunk
+  w Game (`CoastWaterBuilder`), shader `Race1/Water`. Woda jest rzadka: patrz dziennik.
 - [ ] **G6. Mosty i tunele w geometrii.** Filary pod mostami (flaga `Bridge`), tuba tunelu dla flagi C5.
 - [ ] **G7. Dźwięki otoczenia.** Szum opon na poślizgu, wiatr zależny od prędkości, deszcz (pętla)
   generowane przez `EngineSynth`-podobne syntezatory w Core, odtwarzane w Game.
@@ -78,6 +79,18 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 11, cykl godzinny) — G5 zrobione, z zastrzeżeniem o zasięgu. Core: `Shoreline` (poziom
+  morza 0 m, próg biomu Coast 0,5, minimalna głębokość 0,2 m, pas piany 3 m; testy w ShorelineTests). Game:
+  `CoastWaterBuilder` buduje wodę per chunk poza krawędzią drogi, tylko z czworokątów, których wszystkie narożniki
+  leżą poniżej poziomu morza w biomie Coast. Piana jest w kolorze wierzchołków. Shader `Race1/Water` daje Fresnel
+  i piankę. Materiał zapasowy jest używany, gdy shadera nie ma w buildzie. Bramka: woda tylko w chunkach, w których
+  biom Coast ma wagę ≥ 0,5 na zewnętrznym pierścieniu. Pomiar na 50 km trasy (test tymczasowy, usunięty przed
+  commitem): od 0 do 2,8 % chunków z wodą zależnie od ziarna. Dla domyślnego ziarna 20260101 nie ma wody wcale.
+  Przyczyną jest rzadkość biomu Coast (ok. 0,2–0,5 % powierzchni), a nie błąd kodu. Decyzja o częstości wybrzeża
+  należy do świata. Testy: CoreTests 164/164. UnityCheck bez błędów. Nie sprawdzono w Unity: shadera (nie był
+  kompilowany), wyglądu, kosztu budowy siatki na urządzeniu oraz tego, czy woda nie zalewa pobocza, gdy droga biegnie
+  poniżej 0 m. Następny: G6 (mosty i tunele w geometrii).
 
 - 2026-11-09 (uruchomienie 10, cykl godzinny) — G4 zrobione. Core: `TuningControls` (suwak 0–1 ↔ wartość w zakresie
   z C1, procentowa zmiana od fabrycznej, odczyt i zapis jednego pokrętła w rekordzie, cykl opon) oraz

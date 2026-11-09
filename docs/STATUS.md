@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **158/158 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **164/164 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -53,6 +53,7 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Tryb wyścigu: pozycje, kolejność na mecie i odstępy (`RaceDirector`), przeciwnicy AI z IDM w pasach (`AiRacerModel`), wyścig z rywalami na siatce z odliczaniem i trzema poziomami trudności (`RivalRace`). Testy w CoreTests (RaceDirectorTests, RivalRaceTests).
 - Tunele i mosty jako zdarzenia drogi (`RoadSample.Tunnel`, `Bridge`): przełączają się po 60 m trwania, z histerezą; testy w RoadStructureTests. Renderowanie tuneli i filarów mostów jeszcze nie istnieje. Udział jest wysoki w alpejskim terenie i wymaga strojenia.
 - Latarnie nocą: wybór najbliższych N latarni z histerezą (`LampBudget`), testy w LampBudgetTests.
+- Poziom morza i brzeg (`Shoreline`): głębokość, próg biomu Coast, siła piany; testy w ShorelineTests.
 - Kamera fotograficzna (`PhotoOrbit`): orbita, zoom, ogniskowa i FOV z 24 mm sensora, nazwy zrzutów
   (`PhotoShots`); testy w PhotoOrbitTests.
 - Ruch AI: unik na wielopasmowych drogach, bezpieczna luka przy zmianie pasa, testy scenariuszy z hamującym graczem (`TrafficEvasionTests`). Ograniczenie: na dwupasmowej drodze auto nie ma gdzie uciec, więc gracz jadący bez hamowania w wolniejsze auto uderzy.
@@ -83,6 +84,9 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 - Kontrolki dotykowe (pady, gaz, hamulec, ręczny, biegi, widok, pauza) oraz pad, klawiatura i przechył.
 - Silnik audio przez `OnAudioFilterRead` z buforem przydzielonym raz.
 - Menu: start, pauza, garaż z obracającym się autem, wybór trybu/auta/lakieru/pogody/pory dnia/asyst.
+- Woda przybrzeżna: siatka per chunk poza krawędzią drogi (`CoastWaterBuilder`), tylko tam, gdzie biom Coast
+  dominuje i teren leży poniżej 0 m. Shader `Race1/Water` (Fresnel, piana z koloru wierzchołków). Gdy shadera
+  nie ma w buildzie, używany jest nieprzezroczysty materiał zapasowy. Nie sprawdzono w Unity.
 - Garaż z tuningiem (TUNING): suwaki sprężyn, tłumienia, przełożenia i hamulców z procentową zmianą względem
   fabrycznej, wybór opon i RESET. Ustawienia są zapisane per auto w save i używane przy starcie przejazdu.
   Nie sprawdzono w Unity: układu, przeciągania suwaków i zapisu na urządzeniu.
@@ -106,7 +110,11 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
   drzewa, skały i latarnie. Latarnie nie zostały obejrzane w Unity, więc ich wygląd nocą jest nieznany.
 - **Tunele nie są renderowane jako tuby.** Flaga `Bridge` jest liczona, ale nie ma pilonów mostu.
   Głęboki wykop jest zwykłą ścianą skalną.
-- **Brak wody** (morze/jezioro) mimo biomu wybrzeża.
+- **Woda jest rzadka i nieobejrzana.** Pojawia się tylko w biomie Coast poniżej 0 m. Na 50 km trasy
+  w pięciu ziarnach od 0 % do 2,8 % chunków ma wodę, a dla domyślnego ziarna gry (20260101) na tym odcinku
+  nie ma jej wcale. Biom Coast zajmuje w świecie ok. 0,2–0,5 % powierzchni, więc to decyzja o świecie, nie błąd
+  kodu. Shader `Race1/Water` nie był kompilowany ani oglądany. Nie sprawdzono, czy woda nie zalewa pobocza,
+  gdy droga biegnie poniżej 0 m.
 - **Brak deszczu i kropli na szybie, rozprysków, cząsteczek.** Pogoda wpływa na przyczepność,
   mgłę, kolor nieba i nasycenie nawierzchni, ale nie na efekty cząsteczkowe.
 - **Brak refleksów mokrego asfaltu** (SSR/planar); mokra nawierzchnia to niższa przyczepność i ciemniejszy kolor.
@@ -179,7 +187,8 @@ zasłaniające typy `Text` i `Button`.
    w tabeli poniżej.
 2. Zmierzyć koszt budowy chunka i klatki w Unity Profilerze, przy 60 i 120 Hz.
 3. Zastąpić proceduralne samochody autorskimi modelami (Blender, LOD, PBR) lub modelami z licencją.
-4. Dodać tunele (tuba), mosty (filary), wodę i barierki.
+4. Dodać tunele (tuba), mosty (filary) i barierki. Woda na wybrzeżu jest zrobiona, ale rzadka (patrz
+   „Woda jest rzadka” wyżej). Decyzja, czy zwiększyć wybrzeże w świecie, należy do właściciela projektu.
 5. Sprawdzić w Unity tryb AI Race i Photo Mode (kadr, zrzut do `persistentDataPath`, koszt). Oba są
    zaimplementowane, ale nieuruchomione.
 6. Sprawdzić w Unity panel TUNING (układ, przeciąganie suwaków, zapis, start z tuningiem) i zmierzyć,
