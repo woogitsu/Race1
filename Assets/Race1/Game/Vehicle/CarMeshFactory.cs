@@ -26,6 +26,12 @@ namespace Race1.Game
 
         private const int Stations = 44;             // rings along the length
         private const int Sides = 40;                // samples around each ring
+
+        /// <summary>Rings along the length of the simplified body, for distant cars.</summary>
+        public const int LowStations = 16;
+
+        /// <summary>Samples around each ring of the simplified body, for distant cars.</summary>
+        public const int LowSides = 18;
         private const int RimSides = 40;             // segments around the rim lip
         private const int SpokeCount = 5;
         private const float TyreWidth = 0.22f;       // tread width (m)
@@ -51,23 +57,32 @@ namespace Race1.Game
         /// Builds the car body: a lofted shell with wheel-arch recesses, plus paint details. Submesh 0 is paint and
         /// details, 1 is glass, 2 is lamps.
         /// </summary>
-        public static Mesh BuildBody(VehicleSpec spec)
+        public static Mesh BuildBody(VehicleSpec spec) => BuildBody(spec, Stations, Sides);
+
+        /// <summary>
+        /// The same body at a chosen resolution: <paramref name="stations"/> rings along the length and
+        /// <paramref name="sides"/> samples around each ring. The full model uses the defaults; the simplified level of
+        /// detail uses <see cref="LowStations"/> and <see cref="LowSides"/>.
+        /// </summary>
+        public static Mesh BuildBody(VehicleSpec spec, int stations, int sides)
         {
+            stations = Mathf.Max(4, stations);
+            sides = Mathf.Max(8, sides);
             var layout = new Layout(spec);
             var mb = new MeshBuilder(3);
-            var sections = new Section[Stations + 1];
-            var ringStart = new int[Stations + 1];
+            var sections = new Section[stations + 1];
+            var ringStart = new int[stations + 1];
 
             // Shell vertices. Stations cluster towards both ends so the nose and tail keep their shape.
-            for (int r = 0; r <= Stations; r++)
+            for (int r = 0; r <= stations; r++)
             {
-                float p = 0.5f - 0.5f * Mathf.Cos(Mathf.PI * r / Stations);
+                float p = 0.5f - 0.5f * Mathf.Cos(Mathf.PI * r / stations);
                 Section sec = layout.SectionAt(p);
                 sections[r] = sec;
                 ringStart[r] = mb.Verts.Count;
-                for (int s = 0; s < Sides; s++)
+                for (int s = 0; s < sides; s++)
                 {
-                    float theta = s / (float)Sides * 2f * Mathf.PI;
+                    float theta = s / (float)sides * 2f * Mathf.PI;
                     float c = Mathf.Cos(theta);
                     float sn = Mathf.Sin(theta);
                     float n = sn < 0f ? SillExponent : ShoulderExponent;
@@ -76,24 +91,24 @@ namespace Race1.Game
                     float y = sec.Centre + sec.RadiusY * t;
                     if (t > 0f) x *= 1f - Tumblehome * t * t;
                     x *= 1f - ArchDepth * layout.ArchInset(x, y, sec.Z);
-                    mb.Add(new Vector3(x, y, sec.Z), new Vector2(s / (float)Sides, p));
+                    mb.Add(new Vector3(x, y, sec.Z), new Vector2(s / (float)sides, p));
                 }
             }
 
             // Closed ends: planar fans at the first and last rings.
-            AddCap(mb, ringStart[0], new Vector3(0f, 0f, -1f));
-            AddCap(mb, ringStart[Stations], new Vector3(0f, 0f, 1f));
+            AddCap(mb, ringStart[0], sides, new Vector3(0f, 0f, -1f));
+            AddCap(mb, ringStart[stations], sides, new Vector3(0f, 0f, 1f));
 
             // Shell quads, each one classified by where it sits on the car.
-            for (int r = 0; r < Stations; r++)
+            for (int r = 0; r < stations; r++)
             {
                 int r0 = ringStart[r];
                 int r1 = ringStart[r + 1];
-                for (int s = 0; s < Sides; s++)
+                for (int s = 0; s < sides; s++)
                 {
                     int a = r0 + s;
-                    int b = r0 + (s + 1) % Sides;
-                    int d = r1 + (s + 1) % Sides;
+                    int b = r0 + (s + 1) % sides;
+                    int d = r1 + (s + 1) % sides;
                     int e = r1 + s;
                     Vector3 pa = mb.Verts[a];
                     Vector3 pb = mb.Verts[b];
@@ -261,15 +276,15 @@ namespace Race1.Game
             }
         }
 
-        private static void AddCap(MeshBuilder mb, int ring, Vector3 facing)
+        private static void AddCap(MeshBuilder mb, int ring, int sides, Vector3 facing)
         {
             Vector3 apex = Vector3.zero;
-            for (int s = 0; s < Sides; s++) apex += mb.Verts[ring + s];
-            apex /= Sides;
+            for (int s = 0; s < sides; s++) apex += mb.Verts[ring + s];
+            apex /= sides;
             int centre = mb.Add(apex);
-            for (int s = 0; s < Sides; s++)
+            for (int s = 0; s < sides; s++)
             {
-                mb.TriFacing(BodyPaint, centre, ring + s, ring + (s + 1) % Sides, facing);
+                mb.TriFacing(BodyPaint, centre, ring + s, ring + (s + 1) % sides, facing);
             }
         }
 

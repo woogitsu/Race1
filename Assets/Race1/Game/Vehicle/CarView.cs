@@ -71,6 +71,16 @@ namespace Race1.Game
             _lensMaterial = RenderMaterials.Emissive(new Color(0.95f, 0.95f, 0.9f), new Color(0.5f, 0.5f, 0.45f));
             renderer.sharedMaterials = new[] { _paint, GlassMaterial, _lensMaterial };
 
+            // Simplified body for distant cars. It shares the materials, and the level-of-detail group decides which
+            // of the two bodies is drawn.
+            var simpleGo = new GameObject("ShellSimple");
+            simpleGo.transform.SetParent(_body, false);
+            var simpleFilter = simpleGo.AddComponent<MeshFilter>();
+            simpleFilter.sharedMesh = CarMeshFactory.BuildBody(spec, CarMeshFactory.LowStations, CarMeshFactory.LowSides);
+            var simpleRenderer = simpleGo.AddComponent<MeshRenderer>();
+            simpleRenderer.sharedMaterials = renderer.sharedMaterials;
+            simpleRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+
             _carLights = new CarLights(_body, (float)spec.LengthM, (float)spec.WidthM, (float)spec.HeightM);
 
             Mesh wheelMesh = CarMeshFactory.BuildWheel(spec);
@@ -96,6 +106,36 @@ namespace Race1.Game
                 wr.sharedMaterials = new[] { TyreMaterial, RimMaterial };
                 wr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             }
+
+            BuildLod(spec, simpleRenderer);
+        }
+
+        /// <summary>
+        /// Level of detail: the full car near the camera, the simplified body in the middle distance, and nothing
+        /// beyond the cull distance. Every renderer of the full car is in the first level, so the simplified body
+        /// replaces all of it at once.
+        /// </summary>
+        private void BuildLod(VehicleSpec spec, Renderer simple)
+        {
+            Renderer[] all = GetComponentsInChildren<Renderer>(true);
+            var full = new Renderer[all.Length - 1];
+            int n = 0;
+            foreach (Renderer r in all)
+            {
+                if (r != simple) full[n++] = r;
+            }
+
+            float size = (float)System.Math.Max(spec.LengthM, spec.HeightM);
+            CarLod.Transitions(size, out double fullToSimple, out double simpleToCull);
+            var group = gameObject.AddComponent<LODGroup>();
+            group.size = size;
+            group.localReferencePoint = new Vector3(0f, (float)(spec.HeightM * 0.5), 0f);
+            group.SetLODs(new[]
+            {
+                new LOD((float)fullToSimple, full),
+                new LOD((float)simpleToCull, new[] { simple }),
+            });
+            group.RecalculateBounds();
         }
 
         /// <summary>Places the car on the road and updates its parts. Telemetry may be null for AI cars.</summary>

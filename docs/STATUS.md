@@ -7,7 +7,7 @@ uproszczone**. Nie oznaczam nic jako przetestowane, jeśli nie zostało uruchomi
 
 | Obszar | Weryfikacja | Wynik |
 |---|---|---|
-| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **182/182 przechodzi** |
+| Core (droga, fizyka, ruch, kamera, jakość, wejście, layout, niebo, dźwięk, zapis, garaż, opony) | `dotnet test tools/CoreTests` (.NET 8, NUnit 4) | **189/189 przechodzi** |
 | Warstwa Unity — kompilacja semantyczna | `dotnet build tools/UnityCheck` przeciw `UnityEngine.Modules` 2021.3 | **Kompiluje się** (z stubami uGUI, URP, EventSystems i Input System) |
 | Warstwa Unity — uruchomienie w Unity Editorze | — | **Nie wykonano** (brak Unity Editora i licencji w środowisku) |
 | APK | — | **Nie wygenerowano** |
@@ -75,6 +75,8 @@ do kontroli realizmu, nie są deklaracją wydajności na urządzeniu.
 ### Warstwa Unity (napisana, kompiluje się semantycznie, nieuruchomiona)
 - Proceduralne chunki drogi i terenu z oznakowaniem, pulą i floating origin.
 - Instancjonowane drzewa i skały, deterministyczne na chunk.
+- Poziomy szczegółów aut (`CarLod`, `LODGroup` w `CarView`): pełna karoseria, uproszczona od 90 m i wycięcie
+  od 300 m, progi przeliczone z odległości na udział wysokości ekranu. Testy w CarLodTests. Nie oglądane.
 - Samochód: proceduralne nadwozie (superellipsa, przeszklenie, światła), koła z oponą i felgą,
   przechyły i zanurzenie z zawieszenia, obrót kół, światła hamowania.
 - Ruch AI jako osobne wizualne samochody.
@@ -112,7 +114,9 @@ Ta lista jest ważniejsza niż lista funkcji. Wymagania projektu opisują wiele 
 
 ### Grafika i świat
 - **Modele samochodów nie są szczegółowe.** Karoseria to proceduralna superellipsa; nie ma wnętrza,
-  LOD, PBR z teksturami ani licencjonowanych modeli. Wymagania mówią wprost, że to nie może być wersja docelowa.
+  PBR z teksturami ani licencjonowanych modeli. Jest LOD: pełna karoseria do 90 m, uproszczona do 300 m,
+  potem auto nie jest rysowane. LOD nie był oglądany w Unity. Wymagania mówią wprost, że to nie może być wersja
+  docelowa.
 - **Brak budynków, znaków i barierek ze zdobieniami.** Świat ma teren, drogę, oznakowanie,
   drzewa, skały i latarnie. Latarnie nie zostały obejrzane w Unity, więc ich wygląd nocą jest nieznany.
 - **Mosty i tunele są narysowane, ale nieobejrzane.** Filary pod mostami są instancjonowane co 24 m po

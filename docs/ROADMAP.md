@@ -72,7 +72,8 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 - [x] **G7. Dźwięki otoczenia.** Szum opon na poślizgu, wiatr zależny od prędkości, deszcz (pętla)
   generowane przez `EngineSynth`-podobne syntezatory w Core, odtwarzane w Game. Poziomy w `AmbientSoundModel`,
   synteza w `AmbientSynth` (Core, testy), odtwarzanie w `AmbientAudio` (Game). Nie słyszane.
-- [ ] **G8. Poziomy szczegółów aut.** LOD (`LODGroup`) z uproszczoną karoserią dla dalekich aut.
+- [x] **G8. Poziomy szczegółów aut.** LOD (`LODGroup`) z uproszczoną karoserią dla dalekich aut.
+  Progi w Core (`CarLod`, testy), uproszczona karoseria w `CarMeshFactory`, `LODGroup` w `CarView`. Nie oglądane.
 - [ ] **G9. Budżet wydajności.** Limity: chunki, instancje roślinności, liczba świateł, cienie.
   Zapisane w `RaceConfig` i wymuszane przez `PerformanceDirector`.
 - [ ] **G10. Przegląd jakości.** Uzupełnienie `docs/STATUS.md` o listę wizualną i świadomie
@@ -81,6 +82,16 @@ Punkty w kolejności wykonania. Odhaczaj `[x]` po zakończeniu.
 ## Dziennik
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
+
+- 2026-11-09 (uruchomienie 14, cykl godzinny) — G8 zrobione. Core: `CarLod` (pełny model do 90 m, uproszczony do
+  300 m, potem wycięcie; zamiana odległości na udział wysokości ekranu przy polu widzenia 70°, z funkcją odwrotną;
+  testy w CarLodTests). Game: `CarMeshFactory.BuildBody` ma przeciążenie z liczbą pierścieni i próbek; uproszczona
+  karoseria używa 16 pierścieni i 18 próbek i tych samych materiałów. `CarView` dodaje ją jako drugi renderer
+  i buduje `LODGroup`: pierwszy poziom to wszystkie renderery pełnego auta, drugi to uproszczona karoseria. Poza
+  progiem wycięcia auto nie jest rysowane. Domyślne wartości przeciążenia są stałymi, które były już w kodzie,
+  więc pełny model nie powinien się zmienić, ale nie porównałem siatek. Testy: CoreTests 189/189 (7 nowych
+  w CarLodTests). UnityCheck bez błędów. Nie sprawdzono w Unity: przełączania poziomów, wyglądu uproszczonej
+  karoserii, czy światła reflektorów nie świecą na wycięte auta i kosztu. Następny: G9 (budżet wydajności).
 
 - 2026-11-09 (uruchomienie 13, cykl godzinny) — G7 zrobione. Core: `AmbientSoundModel` (poziom wiatru rośnie od
   15 do 90 m/s; pisk opon od sumy kąta i współczynnika poślizgu 0,10 do 0,30; poziom deszczu z zakresu 0–1) oraz
