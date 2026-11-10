@@ -105,6 +105,12 @@ i da się je zrobić oraz przetestować w Core bez urządzenia. Wykonuje się je
 
 <!-- Każde uruchomienie dopisuje wpis na górze tej sekcji. -->
 
+- 2026-11-10 (uruchomienie 27, cykl godzinny) — kolejka nadal pusta: wszystkie punkty C, G i H są `[x]`, a na gałęzi
+  nie ma nowych commitów od origin. Nic nie wdrożono. Propozycje z uruchomienia 21 wymagają Unity Editora, urządzenia
+  albo decyzji właściciela, więc nie da się ich bezpiecznie wykonać w cyklu. Weryfikacja: CoreTests 232/232, UnityCheck
+  bez błędów, drzewo czyste. Blokady bez zmian: brak Unity Editora i urządzenia; licencja Unity po stronie użytkownika.
+
+
 - 2026-11-09 (uruchomienie 26, cykl godzinny) — kolejka nadal pusta: wszystkie punkty C, G i H są `[x]`, więc nic nie
   wdrożono. Nie dodano nowego zakresu, bo wybór należy do właściciela (propozycje w uruchomieniu 21). Weryfikacja:
   CoreTests 232/232, UnityCheck bez błędów, drzewo czyste, gałąź zgodna z origin. Wpis z poprzedniego przebiegu
